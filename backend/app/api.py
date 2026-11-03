@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import logging
+import os
 import sqlite3
 from typing import Iterator, Optional
 
@@ -36,6 +38,8 @@ from .schemas import (
     StudentCreateRequest,
     StudentUpdateRequest,
 )
+
+logger = logging.getLogger("banxu.api")
 
 VERSION = "2.1.0"
 # 前端启动时会核对这些能力；缺少说明后端进程仍是旧版本
@@ -158,6 +162,16 @@ def parse_exam_pdf(payload: PdfExamRequest) -> dict:
     return pdf_exam.parse_score_pdf(raw, payload.file_name)
 
 
+def _backup_after_import(conn: sqlite3.Connection) -> None:
+    """导入考试成绩后立刻落一份备份，避免当天 21:30 前关机丢新数据。测试可关闭。"""
+    if os.environ.get("BANXU_BACKUP_ON_IMPORT", "1") != "1":
+        return
+    try:
+        backup_service.write_backup(conn)
+    except Exception:
+        logger.exception("导入后备份失败")
+
+
 def _derive_missing_class_ranks(payload: ExamCreateRequest, ranks: dict) -> None:
     """没有随成绩提供班次的科目（如 PDF 成绩单），按本班分数自动计算班次；校次保持原样。"""
     for subject in payload.subjects:
@@ -186,6 +200,7 @@ def create_exam(payload: ExamCreateRequest, conn: sqlite3.Connection = Depends(d
             ranks,
             payload.source_format,
         )
+    _backup_after_import(conn)
     return state_of(conn)
 
 

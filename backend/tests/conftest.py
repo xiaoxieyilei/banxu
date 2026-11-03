@@ -15,6 +15,7 @@ from app.main import create_app  # noqa: E402
 os.environ["BANXU_PASSWORD"] = "test-pass"
 # 测试不写用户目录里的真实备份
 os.environ.setdefault("BANXU_BACKUP_ON_START", "0")
+os.environ.setdefault("BANXU_BACKUP_ON_IMPORT", "0")
 auth._cached_password = None
 TEST_PASSWORD = "test-pass"
 

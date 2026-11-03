@@ -120,3 +120,22 @@ def test_startup_backup_writes_pending_changes(client, seeded, tmp_path, monkeyp
 def test_startup_backup_can_be_disabled(client, seeded, monkeypatch):
     monkeypatch.setenv("BANXU_BACKUP_ON_START", "0")
     assert backup_service.startup_backup(client.app.state.connect) is None
+
+
+def test_exam_import_writes_backup_immediately(client, seeded, tmp_path, monkeypatch):
+    target = tmp_path / "导入备份"
+    monkeypatch.setenv("BANXU_BACKUP_DIR", str(target))
+    monkeypatch.setenv("BANXU_BACKUP_ON_IMPORT", "1")
+    response = client.post(
+        "/api/exams",
+        json={
+            "name": "临时数学",
+            "date": "2026-11-05",
+            "subjects": ["数学"],
+            "scores": {"001": {"数学": 90}},
+            "ranks": {},
+        },
+    )
+    assert response.status_code == 201
+    path = target / ("班序备份-%s.json" % datetime.now().strftime("%Y-%m-%d"))
+    assert path.exists()

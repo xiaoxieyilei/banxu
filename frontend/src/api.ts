@@ -101,6 +101,9 @@ export const api = {
   updateExam: (id: string, patch: { name?: string; date?: string }): Promise<AppState> =>
     request(`/exams/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
 
+  replaceExam: (id: string, exam: NewExam): Promise<AppState> =>
+    request(`/exams/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(exam) }),
+
   deleteExam: (id: string): Promise<AppState> =>
     request(`/exams/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 

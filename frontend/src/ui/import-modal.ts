@@ -30,7 +30,8 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
       ? '<div class="form-row"><div class="field"><label for="examName">考试名称（必填）</label>' +
         '<input id="examName" required maxlength="80" placeholder="例如：高一上学期第一次月考"></div>' +
         '<div class="field"><label for="examDate">考试时间（必填）</label><input id="examDate" type="date" required>' +
-        '<span style="font-size:11px;color:var(--muted);margin-top:4px">用于按时间排序、管理历次考试</span></div></div>'
+        '<span style="font-size:11px;color:var(--muted);margin-top:4px">用于按时间排序、管理历次考试</span></div></div>' +
+        '<div class="form-row"><label class="switch-label"><input type="checkbox" id="overwriteExam">覆盖同名同日期考试（替换该场成绩）</label></div>'
       : '';
   const intro =
     kind === 'roster'
@@ -141,25 +142,28 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
       toast('请选择考试时间');
       return;
     }
-    if (state.exams.some((exam) => exam.name === name && exam.date === date)) {
-      toast('已存在同名同日期的考试：请修改名称/日期，或先删除旧考试再导入。');
+    if (!parsed?.matched) return;
+    const duplicate = state.exams.find((exam) => exam.name === name && exam.date === date);
+    const overwrite = ($('#overwriteExam') as HTMLInputElement | null)?.checked ?? false;
+    if (duplicate && !overwrite) {
+      toast('已存在同名同日期的考试：请修改名称/日期，或勾选「覆盖同名同日期考试」。');
       return;
     }
-    if (!parsed?.matched) return;
     if (commit) commit.disabled = true;
     const source = ui.importState?.source === 'pdf' ? 'PDF 导入' : 'Excel 导入';
-    void store
-      .addExam({
-        name,
-        date,
-        subjects: parsed.subjects,
-        scores: parsed.scores,
-        ranks: parsed.ranks,
-        sourceFormat: source,
-      })
+    const exam = {
+      name,
+      date,
+      subjects: parsed.subjects,
+      scores: parsed.scores,
+      ranks: parsed.ranks,
+      sourceFormat: source,
+    };
+    const action = duplicate ? store.replaceExam(duplicate.id, exam) : store.addExam(exam);
+    void action
       .then(() => {
         closeModal();
-        toast(`已导入 ${parsed.matched} 位学生的成绩`);
+        toast(duplicate ? `已覆盖「${name}」的成绩` : `已导入 ${parsed.matched} 位学生的成绩`);
       })
       .catch((error: Error) => {
         toast(error.message);

@@ -137,6 +137,10 @@ export class Store {
     return this.mutate(() => api.updateExam(id, patch));
   }
 
+  replaceExam(id: string, exam: NewExam): Promise<AppState> {
+    return this.mutate(() => api.replaceExam(id, exam));
+  }
+
   removeExam(id: string): Promise<AppState> {
     return this.mutate(() => api.deleteExam(id));
   }

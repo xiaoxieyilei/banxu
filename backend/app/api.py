@@ -204,6 +204,29 @@ def create_exam(payload: ExamCreateRequest, conn: sqlite3.Connection = Depends(d
     return state_of(conn)
 
 
+@router.put("/exams/{exam_id}", response_model=AppState)
+def replace_exam(exam_id: str, payload: ExamCreateRequest, conn: sqlite3.Connection = Depends(db_session)) -> dict:
+    """重新导入并覆盖同一场考试：保留考试 id 与当前选中状态。"""
+    ranks = {
+        sid: {subject: rank.model_dump(by_alias=True) for subject, rank in per.items()}
+        for sid, per in payload.ranks.items()
+    }
+    _derive_missing_class_ranks(payload, ranks)
+    with write_tx(conn):
+        repository.replace_exam(
+            conn,
+            exam_id,
+            payload.name,
+            payload.date,
+            payload.subjects,
+            payload.scores,
+            ranks,
+            payload.source_format,
+        )
+    _backup_after_import(conn)
+    return state_of(conn)
+
+
 @router.patch("/exams/{exam_id}", response_model=AppState)
 def update_exam(exam_id: str, payload: ExamUpdateRequest, conn: sqlite3.Connection = Depends(db_session)) -> dict:
     with write_tx(conn):

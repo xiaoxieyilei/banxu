@@ -167,3 +167,39 @@ def test_fill_missing_class_ranks_repairs_existing_exam(client):
     assert ranks["002"]["数学"]["class"] == 1
     assert ranks["001"]["数学"]["class"] == 2
     assert ranks["003"]["数学"]["class"] == 2
+
+
+def test_replace_exam_keeps_id_and_replaces_scores(client, seeded):
+    exam_id = client.get("/api/state").json()["exams"][0]["id"]
+    client.patch("/api/settings", json={"examId": exam_id, "showScores": True, "subject": "总分"})
+    response = client.put(
+        "/api/exams/%s" % exam_id,
+        json={
+            "name": "重新导入的周练",
+            "date": "2026-10-12",
+            "subjects": ["数学"],
+            "scores": {"001": {"数学": 88}, "002": {"数学": 90}},
+            "ranks": {},
+            "sourceFormat": "PDF 导入",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["exams"]) == 1
+    exam = body["exams"][0]
+    assert exam["id"] == exam_id
+    assert exam["name"] == "重新导入的周练"
+    assert exam["subjects"] == ["数学"]
+    assert exam["scores"] == {"001": {"数学": 88}, "002": {"数学": 90}}
+    assert exam["ranks"]["001"]["数学"]["class"] == 2
+    assert exam["ranks"]["002"]["数学"]["class"] == 1
+    assert body["settings"]["examId"] == exam_id
+    assert body["settings"]["showScores"] is True
+
+
+def test_replace_missing_exam_returns_404(client):
+    response = client.put(
+        "/api/exams/nope",
+        json={"name": "x", "date": "2026-10-11", "subjects": ["数学"], "scores": {}, "ranks": {}},
+    )
+    assert response.status_code == 404

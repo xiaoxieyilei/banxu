@@ -164,6 +164,21 @@ def make_executable() -> None:
                 pass
 
 
+def launchd_managed() -> bool:
+    """只有真的安装了 local.banxu.server LaunchAgent 才交给 launchd 重启。"""
+    label = os.environ.get("LAUNCH_JOB_LABEL") or "local.banxu.server"
+    try:
+        result = subprocess.run(
+            ["launchctl", "print", "gui/%d/%s" % (os.getuid(), label)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=3,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def wait_health(port: int, expected_version: str, timeout: int = 60) -> bool:
     deadline = time.time() + timeout
     url = "http://127.0.0.1:%d/api/health" % port
@@ -235,8 +250,8 @@ def main() -> int:
         run([npm, "run", "build"], ROOT / "frontend", 900)
 
         write_status(phase="restarting", message="正在重启服务…", tag=args.tag, current=args.current)
-        supervised = bool(os.environ.get("XPC_SERVICE_NAME") or os.environ.get("LAUNCH_JOB_LABEL"))
-        log("停止旧服务（pid %s）…" % args.parent_pid)
+        supervised = launchd_managed()
+        log("停止旧服务（pid %s，launchd 管理=%s）…" % (args.parent_pid, supervised))
         try:
             os.kill(args.parent_pid, signal.SIGTERM)
         except ProcessLookupError:

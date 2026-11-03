@@ -109,6 +109,13 @@ async function checkBackendFeatures(): Promise<void> {
   }
 }
 
+function undoLast(): void {
+  guard(async () => {
+    const ok = await store.undo();
+    toast(ok ? '已撤销上一步' : '没有可撤销的操作');
+  });
+}
+
 function guard(action: () => Promise<unknown>): void {
   void action().catch((error: Error & { status?: number }) => {
     if (error.status === 422 && /Extra inputs|extra_forbidden/i.test(error.message)) showVersionWarning();
@@ -255,12 +262,7 @@ function setupSeatControls(): void {
     }
     guard(() => store.updateSettings({ rows: next, extraRow: Math.min(state.settings.extraRow, next - 1) }));
   });
-  $('#undoBtn')?.addEventListener('click', () => {
-    guard(async () => {
-      const ok = await store.undo();
-      toast(ok ? '已撤销上一步' : '没有可撤销的操作');
-    });
-  });
+  $('#undoBtn')?.addEventListener('click', undoLast);
   $('#rotateBtn')?.addEventListener('click', () => {
     guard(async () => {
       await store.rotateSeats();
@@ -570,6 +572,7 @@ function setupDisciplinePage(): void {
 }
 
 function setupGlobal(): void {
+  $('#globalUndoBtn')?.addEventListener('click', undoLast);
   $('#closeModal')?.addEventListener('click', closeModal);
   const modal = $('#modal') as HTMLDialogElement | null;
   modal?.addEventListener('click', (event) => {
@@ -585,6 +588,13 @@ function setupGlobal(): void {
     }
   });
   document.addEventListener('keydown', (event) => {
+    const target = event.target as HTMLElement | null;
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      event.preventDefault();
+      undoLast();
+      return;
+    }
     if (event.key !== 'Escape') return;
     if ((document.querySelector('#modal') as HTMLDialogElement | null)?.open) return; // 交给原生弹窗关闭
     ui.selected = null;

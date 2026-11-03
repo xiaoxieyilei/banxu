@@ -43,6 +43,7 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
        kind === 'exam' ? '.xlsx / .xls / .csv / .pdf' : '.xlsx / .xls / .csv'
      }</span><br>
      <input id="excelFile" type="file" accept="${kind === 'exam' ? '.xlsx,.xls,.csv,.pdf' : '.xlsx,.xls,.csv'}"></div>${examFields}
+     <div id="pdfSubjectRow" class="form-row hidden"><div class="field"><label for="pdfSubject">科目（PDF 自动识别，可修改）</label><select id="pdfSubject"><option>语文</option><option>数学</option><option>英语</option><option>物理</option><option>化学</option><option>生物</option><option>政治</option><option>历史</option><option>地理</option><option>技术</option><option>总分</option><option>成绩</option></select><span style="font-size:11px;color:var(--muted);margin-top:4px">仅影响这一场考试写入的科目名</span></div></div>
      <div id="importOptions" class="hidden"><div class="form-row"><div class="field"><label>工作表</label><select id="sheetSelect"></select></div></div>
      <div id="importNotice"></div><div id="importPreview" class="preview"></div></div>`,
     '<button data-close>取消</button><button class="primary" id="commitImport" disabled>确认导入</button>',
@@ -58,6 +59,7 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
     if (!file) return;
     if (commit) commit.disabled = true;
     $('#importOptions')?.classList.add('hidden');
+    $('#pdfSubjectRow')?.classList.add('hidden');
     setHTML('#importPreview', '');
     setHTML('#importNotice', '');
     ui.parsedExam = null;
@@ -101,6 +103,12 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
     }
   });
 
+  $('#pdfSubject')?.addEventListener('change', (event) => {
+    const parsed = ui.importState?.pdf;
+    if (!parsed) return;
+    applyPdfMapping(store, parsed, (event.target as HTMLSelectElement).value, commit);
+  });
+
   commit?.addEventListener('click', () => {
     const state = store.state;
     if (!state) return;
@@ -131,6 +139,10 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
     }
     if (!date) {
       toast('请选择考试时间');
+      return;
+    }
+    if (state.exams.some((exam) => exam.name === name && exam.date === date)) {
+      toast('已存在同名同日期的考试：请修改名称/日期，或先删除旧考试再导入。');
       return;
     }
     if (!parsed?.matched) return;
@@ -191,6 +203,35 @@ function renderPdfPreview(parsed: PdfParsedExam): void {
   );
 }
 
+function applyPdfMapping(
+  store: Store,
+  parsed: PdfExamParse,
+  subject: string,
+  commit: HTMLButtonElement | null,
+): void {
+  const state = store.state;
+  if (!state) return;
+  const mapping = mapPdfRows(parsed.rows, state.students, subject);
+  ui.parsedExam = mapping;
+  const notice = $('#importNotice');
+  const lines = [
+    `已识别 ${parsed.pageCount} 页 · ${parsed.rows.length} 位学生 · 科目「${mapping.subjects[0]}」 · 确认后自动计算班次${
+      parsed.fullMarks ? ` · 满分 ${parsed.fullMarks}` : ''
+    }`,
+    ...parsed.warnings,
+    ...mapping.warnings,
+  ];
+  if (mapping.errors.length) {
+    lines.unshift(`有 ${mapping.errors.length} 处问题，请处理后重新选择文件：`, ...mapping.errors.slice(0, 8));
+  }
+  if (notice) {
+    notice.innerHTML = `<div class="notice ${mapping.errors.length ? 'error' : ''}">${esc(lines.join('\n'))}</div>`;
+    notice.title = [...mapping.errors, ...parsed.warnings, ...mapping.warnings].join('\n');
+  }
+  renderPdfPreview(mapping);
+  if (commit) commit.disabled = mapping.errors.length > 0 || mapping.matched === 0;
+}
+
 /** 学校「学生成绩单」PDF：后端解析文字与表格，前端按姓名匹配并走同一套预览/确认流程。 */
 async function previewPdf(
   store: Store,
@@ -204,16 +245,9 @@ async function previewPdf(
   }
   const state = store.state;
   if (!state) return;
-  const notice = $('#importNotice');
-  const showNotice = (message: string, isError: boolean): void => {
-    if (!notice) return;
-    notice.innerHTML = `<div class="notice ${isError ? 'error' : ''}">${esc(message)}</div>`;
-  };
   try {
     const parsed: PdfExamParse = await api.parsePdfExam(file.name, arrayBufferToBase64(await file.arrayBuffer()));
-    ui.importState = { kind, workbook: null, fileName: file.name, source: 'pdf' };
-    const mapping = mapPdfRows(parsed.rows, state.students, parsed.subject || '成绩');
-    ui.parsedExam = mapping;
+    ui.importState = { kind, workbook: null, fileName: file.name, source: 'pdf', pdf: parsed };
 
     const nameInput = $('#examName') as HTMLInputElement | null;
     if (nameInput) nameInput.value = parsed.examName || file.name.replace(/\.[^.]+$/, '');
@@ -225,25 +259,25 @@ async function previewPdf(
       }
     }
 
-    const lines = [
-      `已识别 ${parsed.pageCount} 页 · ${parsed.rows.length} 位学生 · 科目「${mapping.subjects[0]}」 · 确认后自动计算班次${
-        parsed.fullMarks ? ` · 满分 ${parsed.fullMarks}` : ''
-      }`,
-      ...parsed.warnings,
-      ...mapping.warnings,
-    ];
-    if (mapping.errors.length) {
-      lines.unshift(`有 ${mapping.errors.length} 处问题，请处理后重新选择文件：`, ...mapping.errors.slice(0, 8));
+    const subjectSelect = $('#pdfSubject') as HTMLSelectElement | null;
+    const detected = parsed.subject || '成绩';
+    if (subjectSelect) {
+      if (![...subjectSelect.options].some((option) => option.value === detected)) {
+        subjectSelect.add(new Option(detected, detected));
+      }
+      subjectSelect.value = detected;
     }
-    showNotice(lines.join('\n'), mapping.errors.length > 0);
-    if (notice) notice.title = [...mapping.errors, ...parsed.warnings, ...mapping.warnings].join('\n');
-    renderPdfPreview(mapping);
-    if (commit) commit.disabled = mapping.errors.length > 0 || mapping.matched === 0;
+    $('#pdfSubjectRow')?.classList.remove('hidden');
+    applyPdfMapping(store, parsed, detected, commit);
   } catch (error) {
     ui.importState = null;
     ui.parsedExam = null;
+    $('#pdfSubjectRow')?.classList.add('hidden');
     setHTML('#importPreview', '');
-    showNotice((error as Error).message || 'PDF 解析失败', true);
+    setHTML(
+      '#importNotice',
+      `<div class="notice error">${esc((error as Error).message || 'PDF 解析失败')}</div>`,
+    );
     if (commit) commit.disabled = true;
     toast((error as Error).message || 'PDF 解析失败');
   }

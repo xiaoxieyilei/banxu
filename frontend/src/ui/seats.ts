@@ -32,6 +32,8 @@ interface SeatScoreContext {
   subjectOptions: string[];
   pool: ReturnType<typeof examPool>;
   scores: Map<string, AverageTotal>;
+  /** 单场考试若官方班次齐全，优先显示学校导入的班次 */
+  rankSource: 'official' | 'score';
 }
 
 /** 座位表当前统计口径：单场考试或最近 3/5 次、全部考试平均，以及所选科目。 */
@@ -42,14 +44,31 @@ export function seatScoreContext(state: AppState): SeatScoreContext {
   const subjectOptions = callSubjectOptions(state.exams, range, examId);
   const subject = resolveSubject(subjectOptions, state.settings.subject, '总分');
   const pool = examPool(state.exams, range, subject, examId);
-  return {
-    range,
-    examId,
-    subject,
-    subjectOptions,
-    pool,
-    scores: scoreRanking(state.students, pool, subject),
-  };
+  const scores = scoreRanking(state.students, pool, subject);
+  let rankSource: 'official' | 'score' = 'score';
+  if (range === 'single') {
+    const exam = state.exams.find((item) => item.id === examId);
+    const official = new Map<string, number>();
+    let scored = 0;
+    for (const student of state.students) {
+      const value = exam?.scores?.[student.id]?.[subject];
+      if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+      scored += 1;
+      const klass = exam?.ranks?.[student.id]?.[subject]?.class;
+      if (typeof klass === 'number' && klass > 0) official.set(student.id, klass);
+    }
+    if (scored > 0 && official.size === scored) {
+      for (const [studentId, rank] of official) {
+        const entry = scores.get(studentId);
+        if (entry) {
+          entry.rank = rank;
+          entry.ranked = scored;
+        }
+      }
+      rankSource = 'official';
+    }
+  }
+  return { range, examId, subject, subjectOptions, pool, scores, rankSource };
 }
 
 function scoreMarkup(score: AverageTotal | undefined, single: boolean): string {
@@ -69,7 +88,13 @@ function scoreTitle(score: AverageTotal | undefined, context: SeatScoreContext):
     context.range === 'single'
       ? `${context.subject} ${value} 分`
       : `${mode} · ${context.subject} 平均 ${value} 分（${score.count} 场）`;
-  return score.rank === null ? ` · ${basis}` : ` · ${basis} · 班次 ${score.rank} / ${score.ranked}`;
+  const rankLabel =
+    score.rank === null
+      ? ''
+      : context.rankSource === 'official'
+        ? ` · 班次 ${score.rank} / ${score.ranked}（学校数据）`
+        : ` · 班次 ${score.rank} / ${score.ranked}（按分数计算）`;
+  return ` · ${basis}${rankLabel}`;
 }
 
 function seatMarkup(
@@ -202,6 +227,8 @@ export function setUndoAvailable(value: boolean): void {
   uiCanUndo = value;
   const undo = $('#undoBtn') as HTMLButtonElement | null;
   if (undo) undo.disabled = !value;
+  const globalUndo = $('#globalUndoBtn') as HTMLButtonElement | null;
+  if (globalUndo) globalUndo.disabled = !value;
 }
 
 function renderWaiting(state: AppState, context: SeatScoreContext): void {

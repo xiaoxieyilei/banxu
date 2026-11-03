@@ -1,4 +1,4 @@
-import type { Category, DisciplineRecord } from '../types.js';
+import type { Category, DisciplineRecord, PdfExamParse } from '../types.js';
 import type { Workbook } from '../lib/excel.js';
 import { DEFAULT_DISCIPLINE_TYPE } from '../lib/discipline.js';
 import type { PreviewSortKey } from '../lib/ranking.js';
@@ -12,6 +12,8 @@ export interface ImportState {
   fileName?: string;
   /** 成绩来源：Excel 或学校成绩单 PDF */
   source?: 'excel' | 'pdf';
+  /** PDF 原始解析结果，用于切换科目时重新映射 */
+  pdf?: PdfExamParse;
 }
 
 /** 纯前端 UI 状态：不属于业务数据，刷新即重置。 */

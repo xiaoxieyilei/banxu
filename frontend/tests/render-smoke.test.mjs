@@ -138,6 +138,27 @@ test('座位页可按单次考试或科目平均分显示成绩与班次', () =>
   assert.ok(average.includes('班次 1'));
 });
 
+test('座位页单场考试优先使用学校导入的官方班次', () => {
+  const officialState = {
+    ...state,
+    settings: { ...state.settings, seatRange: 'single', examId: 'e1', subject: '总分', showScores: true },
+    exams: [
+      {
+        ...state.exams[0],
+        ranks: {
+          '001': { 总分: { school: 2, class: 7 } },
+          '002': { 总分: { school: 5, class: 3 } },
+        },
+      },
+    ],
+  };
+  renderSeatPage(officialState);
+  const html = nodes.get('seating').innerHTML;
+  assert.ok(html.includes('班次 7'), '001 应显示官方班次');
+  assert.ok(html.includes('班次 3'), '002 应显示官方班次');
+  assert.ok(html.includes('（学校数据）'), '标题应标注班次来源');
+});
+
 test('名单页渲染表格且不泄漏未转义字符', () => {
   const risky = { ...state, students: [{ id: '004', name: '<img src=x onerror=alert(1)>', gender: '男', note: '<b>注</b>' }] };
   renderRosterPage(risky);

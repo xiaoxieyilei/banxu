@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import sys
 from pathlib import Path
 import os
 import sqlite3
@@ -44,11 +45,19 @@ from .schemas import (
 logger = logging.getLogger("banxu.api")
 
 def _read_version() -> str:
-    try:
-        text = (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
-        return text or "2.1.0"
-    except OSError:
-        return "2.1.0"
+    candidates = []
+    bundle = getattr(sys, "_MEIPASS", None)
+    if bundle:
+        candidates.append(Path(bundle) / "VERSION")
+    candidates.append(Path(__file__).resolve().parents[2] / "VERSION")
+    for candidate in candidates:
+        try:
+            text = candidate.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        except OSError:
+            continue
+    return "2.1.0"
 
 
 VERSION = _read_version()

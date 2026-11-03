@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -125,7 +126,9 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
 
     app.include_router(router)
 
-    dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    # PyInstaller 打包后资源在 sys._MEIPASS；源码运行时在项目根目录
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
+    dist = base / "frontend" / "dist"
     if dist.is_dir():
         app.mount("/", StaticFiles(directory=str(dist), html=True), name="frontend")
     return app

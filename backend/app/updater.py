@@ -22,10 +22,10 @@ from typing import Optional
 
 from .domain import DomainError
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("BANXU_APP_ROOT", getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2])))
 VERSION_FILE = ROOT / "VERSION"
 CONFIG_FILE = ROOT / "update.json"
-DATA_DIR = ROOT / "backend" / "data"
+DATA_DIR = Path(os.environ.get("BANXU_DATA_DIR", str(ROOT / "backend" / "data")))
 STATUS_FILE = DATA_DIR / "update-status.json"
 UPDATE_LOG = DATA_DIR / "update.log"
 CACHE_SECONDS = 300
@@ -113,11 +113,14 @@ def fetch_latest(repo: str) -> Optional[dict]:
 def check_for_update(force: bool = False) -> dict:
     repo = repo_slug()
     current = current_version()
+    packaged = os.environ.get("BANXU_PACKAGED") == "1"
     if not repo:
         return {
             "configured": False,
             "current": current,
             "available": False,
+            "packaged": packaged,
+            "applySupported": not packaged,
             "message": "尚未配置 GitHub 更新仓库（update.json 的 repo 为空）",
         }
     now = time.time()
@@ -131,6 +134,8 @@ def check_for_update(force: bool = False) -> dict:
             "available": False,
             "message": "仓库还没有 Release 或 Tag",
             "repo": repo,
+            "packaged": packaged,
+            "applySupported": not packaged,
         }
     else:
         data = {
@@ -143,6 +148,8 @@ def check_for_update(force: bool = False) -> dict:
             "publishedAt": latest["publishedAt"],
             "kind": latest["kind"],
             "repo": repo,
+            "packaged": packaged,
+            "applySupported": not packaged,
         }
     _check_cache["at"] = now
     _check_cache["data"] = data
@@ -210,6 +217,12 @@ def _allowed_zipball(url: str) -> bool:
 
 
 def apply_update(tag: str, host: str, port: int, parent_pid: Optional[int] = None) -> dict:
+    if os.environ.get("BANXU_PACKAGED") == "1":
+        raise DomainError(
+            "这是打包版，请从 GitHub Releases 下载新的安装包覆盖旧版本",
+            status=400,
+            code="packaged_update_required",
+        )
     repo = repo_slug()
     if not repo:
         raise DomainError("尚未配置 GitHub 更新仓库", status=400, code="update_unconfigured")

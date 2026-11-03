@@ -11,7 +11,9 @@ from typing import Optional
 from fastapi import Request
 
 COOKIE_NAME = "banxu_auth"
-PASSWORD_FILE = Path(__file__).resolve().parent.parent / "data" / ".password"
+PASSWORD_FILE = Path(
+    os.environ.get("BANXU_PASSWORD_FILE", str(Path(__file__).resolve().parent.parent / "data" / ".password"))
+).expanduser()
 _cached_password: Optional[str] = None
 
 
@@ -50,6 +52,10 @@ def token() -> str:
 
 
 def authenticated(request: Request) -> bool:
+    # 桌面打包版只监听 127.0.0.1 时自动放行本机浏览器；手机访问仍必须口令
+    if os.environ.get("BANXU_LOCAL_AUTO_LOGIN") == "1" and request.client is not None:
+        if request.client.host in ("127.0.0.1", "::1"):
+            return True
     cookie = request.cookies.get(COOKIE_NAME, "")
     if cookie and hmac.compare_digest(cookie, token()):
         return True

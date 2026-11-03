@@ -13,3 +13,6 @@ backups/
 docs/*.bak
 docs/*.bak2
 docs/手机访问二维码*.png
+packaging/build/
+packaging/dist/
+packaging/*.spec

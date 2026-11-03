@@ -24,6 +24,17 @@
 
 后端 FastAPI、SQLite、PDF 解析（PyMuPDF）和前端都是跨平台的；只有双击启动器和 macOS LaunchAgent 是系统专属的。自动更新在三个系统上都能工作。
 
+## 下载安装包（无需 Python/Node）
+
+Release 里提供 macOS 独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
+
+1. 打开 <https://github.com/yatesyork8675-ui/banxu/releases>，下载最新的 `班序-macOS-arm64.zip`；
+2. 解压后把 `班序.app` 拖到「应用程序」；
+3. 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（安装包未做 Apple 公证）；
+4. 之后双击即用，数据保存在 `~/Library/Application Support/班序`，备份在 `~/Documents/班序备份（安装版）`。
+
+> 当前 Release 只提供 macOS Apple Silicon 安装包；Intel Mac / Windows / Linux 可先用源码启动，安装包在 TODO issue 中。
+
 ## 快速开始
 
 ```bash
@@ -106,7 +117,7 @@ backend/.venv/bin/python backend/scripts/import_school_scores.py 成绩表.xlsx 
 - **寝室违纪统计**：按寝室聚合「寝室违纪」事件（同寝室同一天同备注算 1 次），可整间记一次/撤销整次；支持「添加寝室」和逐间「编辑」（改寝室号、调成员、增删违纪事件）。违纪记录归属寝室号，学生调寝后事件仍留在原寝室并标注“已调出”，不会带走或误删其他寝室的记录。
 - **满分口径**：考试信息弹窗可为每科填写满分；PDF 导入自动带入；用于把不同满分的考试换算成可比的百分制。
 - **数据安全**：数据在本机 SQLite；支持导出/恢复 JSON 备份；顶部「↶ 撤销」或 ⌘Z 可全局撤销最近 30 步。
-- **自动更新**：顶部「检查更新」从 GitHub Release/Tag 获取新版本，一键下载、重新构建并重启；保留数据库、口令、备份与个人配置。
+- **自动更新**：源码启动版顶部「检查更新」可一键下载、重建、重启；安装包版会提示从 Releases 下载新安装包（避免破坏应用签名与运行时）。
 - **手机访问**：双击 `启动班序（手机访问）.command`（macOS）或 `.bat`（Windows）后监听 0.0.0.0 + 访问口令登录；手机经 Tailscale（或同一 Wi-Fi）打开 `http://<电脑IP>:8000`，可“添加到主屏幕”当 App 用，与电脑共用同一份数据。详见 `docs/手机访问与同步.md`。
 - **每日自动备份**：后端每天 **21:30** 检查一次，只有数据相对上一份备份有变化时，才把完整状态写入 `<用户文档目录>/班序备份/班序备份-YYYY-MM-DD.json`（目录自动创建，同一天覆盖）；当天没有改动就跳过，不生成重复备份。软件启动时还会补一次备份（数据没变则跳过），避免 21:30 时电脑没开机而漏备；备份完全由软件自身完成，不再由 DSH 定时任务代为调用；DSH 定时任务只做只读自检（21:45 报告备份状态）。页面右上角「备份到文件夹」可随时手动生成当天备份（手动导出总是落盘）。备份状态可查 `GET /api/backup/status`。
 
@@ -177,6 +188,15 @@ cd frontend && npm run build && npm test && cd ..
 cd frontend && npm run test:e2e && cd ..
 ```
 
+## 构建 macOS 安装包
+
+```bash
+./packaging/build-macos.sh
+# 产物：packaging/dist/班序.app 与 packaging/dist/班序-macOS-arm64.zip
+```
+
+需要本机已运行过一次 `./run.sh`（有 `backend/.venv` 和 `frontend/dist`）。
+
 ## 发布新版本
 
 1. 修改根目录 `VERSION`（例如 `2.2.0`）并提交；
@@ -188,7 +208,8 @@ git push origin main --tags
 gh release create v2.2.0 --generate-notes
 ```
 
-3. 朋友打开班序，点「检查更新 → 更新到 v2.2.0」即可自动更新。
+3. 把 `packaging/dist/班序-macOS-arm64.zip` 上传到 Release；
+4. 源码版朋友点「检查更新 → 更新到 v2.2.0」即可自动更新；安装包版按提示下载新安装包覆盖。
 
 更新仓库配置在项目根目录 `update.json`；只允许从该仓库的 Release/Tag 下载，避免任意地址更新。
 

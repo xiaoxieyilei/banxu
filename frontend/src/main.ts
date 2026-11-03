@@ -193,8 +193,12 @@ function showUpdateDialog(info: UpdateInfo): void {
     `<p>当前版本 <b>${esc(info.current)}</b>，GitHub 最新版本 <b>${esc(info.latest ?? '')}</b>。</p>` +
       (info.publishedAt ? `<p>发布时间：${esc(info.publishedAt.replace('T', ' ').slice(0, 16))}</p>` : '') +
       (notes ? `<pre class="update-notes">${esc(notes.slice(0, 4000))}</pre>` : '<p>该版本没有附带更新说明。</p>') +
-      '<p class="hint">更新会保留学生、成绩、座位和备份数据，并自动重新构建前端、重启班序服务。</p>',
-    '<button data-close>稍后</button><button class="primary" id="applyUpdateBtn">立即更新</button>',
+      (info.applySupported === false
+        ? `<p class="hint">这是安装版，请从 <a href="${esc(info.url || '#')}" target="_blank" rel="noreferrer">GitHub Releases</a> 下载新的安装包覆盖旧版本；学生数据保存在本机，不会丢失。</p>`
+        : '<p class="hint">更新会保留学生、成绩、座位和备份数据，并自动重新构建前端、重启班序服务。</p>'),
+    info.applySupported === false
+      ? '<button data-close>知道了</button>'
+      : '<button data-close>稍后</button><button class="primary" id="applyUpdateBtn">立即更新</button>',
   );
   $('#applyUpdateBtn')?.addEventListener('click', () => {
     if (!info.latest) return;

@@ -69,6 +69,8 @@ export interface UpdateInfo {
   kind?: string;
   repo?: string;
   message?: string;
+  packaged?: boolean;
+  applySupported?: boolean;
 }
 
 export interface UpdateStatus {

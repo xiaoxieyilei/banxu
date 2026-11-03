@@ -31,6 +31,17 @@ backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --port 8000
 
 > 安全提醒：本项目是**本机单用户**工具，用访问口令保护。默认只监听 `127.0.0.1`；需要手机访问时用 `启动班序（手机访问）.command`（或 `BANXU_HOST=0.0.0.0 ./run.sh`），并只在可信 Wi-Fi / Tailscale 下使用。
 
+### 可选：开机自启（macOS LaunchAgent）
+
+先手动运行一次 `./run.sh` 完成依赖安装与前端构建，然后：
+
+```bash
+./scripts/install-launchagent.command          # 只监听 127.0.0.1
+ALLOW_PHONE=1 ./scripts/install-launchagent.command   # 允许手机访问（0.0.0.0）
+```
+
+日志在 `~/Library/Logs/banxu-server.log`；卸载用 `./scripts/uninstall-launchagent.command`。安装前需先停止当前正在运行的班序进程。
+
 ## 从旧版备份迁移
 
 旧版单文件（localStorage 结构）的 JSON 备份可以用脚本导入新版：

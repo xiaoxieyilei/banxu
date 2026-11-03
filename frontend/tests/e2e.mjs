@@ -109,6 +109,19 @@ try {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(String(error)));
 
+  await page.route('**/api/update/check**', (route) =>
+    route.fulfill({
+      json: {
+        configured: true,
+        current: '2.1.3',
+        available: true,
+        latest: 'v9.9.9',
+        notes: 'E2E 测试版本',
+        publishedAt: '2026-11-03T00:00:00Z',
+      },
+    }),
+  );
+
   await page.goto(base, { waitUntil: 'networkidle' });
   await page.waitForSelector('#loginOverlay:not(.hidden)');
   await page.fill('#loginPassword', 'e2e-pass');
@@ -118,6 +131,12 @@ try {
 
   const warningHidden = await page.locator('#versionWarning').evaluate((node) => node.classList.contains('hidden'));
   assert.equal(warningHidden, true, '当前后端不应显示旧版本提示');
+
+  await page.waitForFunction(() => document.querySelector('#updateBtn')?.textContent?.includes('v9.9.9'));
+  await page.click('#updateBtn');
+  await page.waitForSelector('#applyUpdateBtn');
+  assert.ok((await page.locator('#modal').innerText()).includes('E2E 测试版本'), '更新弹窗应显示版本说明');
+  await page.click('#modal [data-close]');
 
   await page.check('#showScores');
   await page.selectOption('#subjectSelect', '数学');

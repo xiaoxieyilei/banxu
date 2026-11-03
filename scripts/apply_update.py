@@ -133,14 +133,47 @@ def copy_source(source: Path) -> None:
     shutil.copytree(source, ROOT, dirs_exist_ok=True, ignore=ignore_source)
 
 
-def wait_health(port: int, timeout: int = 45) -> bool:
+def verify_copy(source: Path) -> None:
+    """复制后逐文件校验大小，避免半截文件（例如大 vendor 包）被静默带进新版本。"""
+    for path in source.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(source)
+        if any(part in PROTECTED_NAMES for part in relative.parts) or path.suffix == ".pyc":
+            continue
+        target = ROOT / relative
+        if not target.is_file() or target.stat().st_size != path.stat().st_size:
+            raise RuntimeError("复制校验失败：%s" % relative)
+
+
+def make_executable() -> None:
+    for name in (
+        "run.sh",
+        "启动班序.command",
+        "启动班序（手机访问）.command",
+        "scripts/start-server.sh",
+        "scripts/install-launchagent.command",
+        "scripts/uninstall-launchagent.command",
+        "scripts/apply_update.py",
+    ):
+        path = ROOT / name
+        if path.exists():
+            try:
+                path.chmod(0o755)
+            except OSError:
+                pass
+
+
+def wait_health(port: int, expected_version: str, timeout: int = 60) -> bool:
     deadline = time.time() + timeout
     url = "http://127.0.0.1:%d/api/health" % port
     while time.time() < deadline:
         try:
             with urllib.request.urlopen(url, timeout=2) as response:
                 if response.status == 200:
-                    return True
+                    body = json.loads(response.read().decode("utf-8"))
+                    if str(body.get("version")) == expected_version:
+                        return True
         except Exception:
             pass
         time.sleep(0.5)
@@ -183,7 +216,9 @@ def main() -> int:
         backup = backup_source()
         write_status(phase="applying", message="正在替换源码…", tag=args.tag, current=args.current)
         copy_source(source)
+        verify_copy(source)
         (ROOT / "VERSION").write_text(new_version + "\n", encoding="utf-8")
+        make_executable()
 
         python = ROOT / "backend" / ".venv" / "bin" / "python"
         if python.exists():
@@ -201,34 +236,34 @@ def main() -> int:
 
         write_status(phase="restarting", message="正在重启服务…", tag=args.tag, current=args.current)
         supervised = bool(os.environ.get("XPC_SERVICE_NAME") or os.environ.get("LAUNCH_JOB_LABEL"))
+        log("停止旧服务（pid %s）…" % args.parent_pid)
         try:
             os.kill(args.parent_pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
         wait_pid(args.parent_pid)
-        if not wait_health(args.port, 20):
-            if supervised:
-                # launchd 会按 KeepAlive 自动拉起；再等一轮
-                pass
-            else:
-                env = {
-                    **os.environ,
-                    "BANXU_HOST": args.host,
-                    "PORT": str(args.port),
-                }
-                server_log = DATA_DIR / "update-server.log"
-                DATA_DIR.mkdir(parents=True, exist_ok=True)
-                handle = server_log.open("ab")
-                subprocess.Popen(
-                    ["/bin/bash", str(ROOT / "scripts" / "start-server.sh")],
-                    cwd=str(ROOT),
-                    stdout=handle,
-                    stderr=handle,
-                    start_new_session=True,
-                    close_fds=True,
-                    env=env,
-                )
-        if not wait_health(args.port, 60):
+        if supervised:
+            log("检测到 launchd 管理，等待它自动拉起…")
+        else:
+            log("启动新服务：%s:%s" % (args.host, args.port))
+            env = {
+                **os.environ,
+                "BANXU_HOST": args.host,
+                "PORT": str(args.port),
+            }
+            server_log = DATA_DIR / "update-server.log"
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            handle = server_log.open("ab")
+            subprocess.Popen(
+                ["/bin/bash", str(ROOT / "scripts" / "start-server.sh")],
+                cwd=str(ROOT),
+                stdout=handle,
+                stderr=handle,
+                start_new_session=True,
+                close_fds=True,
+                env=env,
+            )
+        if not wait_health(args.port, new_version, 90):
             raise RuntimeError("服务重启后未通过健康检查，请查看 backend/data/update-server.log")
         write_status(phase="done", message="更新完成，服务已重启", tag=args.tag, current=new_version)
         log("更新完成：%s" % new_version)

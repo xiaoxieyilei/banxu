@@ -28,7 +28,7 @@
 
 Release 里提供 macOS 独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
 
-1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新的 `班序-macOS-arm64.zip`；
+1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新的 `banxu-macOS-arm64.zip`；
 2. 解压后把 `班序.app` 拖到「应用程序」；
 3. 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（安装包未做 Apple 公证）；
 4. 之后双击即用，数据保存在 `~/Library/Application Support/班序`，备份在 `~/Documents/班序备份（安装版）`。
@@ -192,7 +192,7 @@ cd frontend && npm run test:e2e && cd ..
 
 ```bash
 ./packaging/build-macos.sh
-# 产物：packaging/dist/班序.app 与 packaging/dist/班序-macOS-arm64.zip
+# 产物：packaging/dist/班序.app 与 packaging/dist/banxu-macOS-arm64.zip
 ```
 
 需要本机已运行过一次 `./run.sh`（有 `backend/.venv` 和 `frontend/dist`）。
@@ -208,7 +208,7 @@ git push origin main --tags
 gh release create v2.2.0 --generate-notes
 ```
 
-3. 把 `packaging/dist/班序-macOS-arm64.zip` 上传到 Release；
+3. 把 `packaging/dist/banxu-macOS-arm64.zip` 上传到 Release；
 4. 源码版朋友点「检查更新 → 更新到 v2.2.0」即可自动更新；安装包版按提示下载新安装包覆盖。
 
 更新仓库配置在项目根目录 `update.json`；只允许从该仓库的 Release/Tag 下载，避免任意地址更新。

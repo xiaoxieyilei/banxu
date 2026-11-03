@@ -27,7 +27,7 @@ plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Inf
 plutil -replace CFBundleVersion -string "$VERSION" "$APP/Contents/Info.plist"
 codesign --deep --force --sign - "$APP"
 ARCH="$(uname -m)"
-ZIP="$ROOT/packaging/dist/班序-macOS-${ARCH}.zip"
+ZIP="$ROOT/packaging/dist/banxu-macOS-${ARCH}.zip"
 ditto -c -k --keepParent "$APP" "$ZIP"
 echo "构建完成：$APP"
 echo "发布包：$ZIP"

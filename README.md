@@ -5,6 +5,7 @@
 - 项目主页：<https://github.com/xiaoxieyilei/banxu>
 - **详细使用说明：[docs/使用说明.md](docs/使用说明.md)**
 - 开源协议：[MIT](LICENSE)
+- 路线图 / TODO：[Issue #9](https://github.com/xiaoxieyilei/banxu/issues/9)（Windows/Linux 安装包、签名公证、成绩编辑、CI 等）
 
 本目录是「固化为正式项目」后的版本：
 

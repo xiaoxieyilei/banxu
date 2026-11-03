@@ -43,7 +43,7 @@ logger = logging.getLogger("banxu.api")
 
 VERSION = "2.1.0"
 # 前端启动时会核对这些能力；缺少说明后端进程仍是旧版本
-FEATURES = ("seatRange", "pdfExamImport", "autoClassRanks")
+FEATURES = ("seatRange", "pdfExamImport", "autoClassRanks", "examFullMarks")
 router = APIRouter(prefix="/api")
 
 
@@ -199,6 +199,7 @@ def create_exam(payload: ExamCreateRequest, conn: sqlite3.Connection = Depends(d
             payload.scores,
             ranks,
             payload.source_format,
+            full_marks=payload.full_marks,
         )
     _backup_after_import(conn)
     return state_of(conn)
@@ -222,6 +223,7 @@ def replace_exam(exam_id: str, payload: ExamCreateRequest, conn: sqlite3.Connect
             payload.scores,
             ranks,
             payload.source_format,
+            full_marks=payload.full_marks,
         )
     _backup_after_import(conn)
     return state_of(conn)
@@ -230,7 +232,7 @@ def replace_exam(exam_id: str, payload: ExamCreateRequest, conn: sqlite3.Connect
 @router.patch("/exams/{exam_id}", response_model=AppState)
 def update_exam(exam_id: str, payload: ExamUpdateRequest, conn: sqlite3.Connection = Depends(db_session)) -> dict:
     with write_tx(conn):
-        repository.update_exam(conn, exam_id, payload.name, payload.date)
+        repository.update_exam(conn, exam_id, payload.name, payload.date, payload.full_marks)
     return state_of(conn)
 
 

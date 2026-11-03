@@ -138,6 +138,37 @@ test('座位页可按单次考试或科目平均分显示成绩与班次', () =>
   assert.ok(average.includes('班次 1'));
 });
 
+test('座位页平均模式在每场都有满分时按百分制折算', () => {
+  const exams = [
+    {
+      id: 'm1', name: '数学限时 1', date: '2026-10-01', subjects: ['数学'], sourceFormat: '',
+      scores: { '001': { 数学: 96 }, '002': { 数学: 60 } }, ranks: {}, fullMarks: { 数学: 120 },
+    },
+    {
+      id: 'm2', name: '数学限时 2', date: '2026-10-08', subjects: ['数学'], sourceFormat: '',
+      scores: { '001': { 数学: 72 }, '002': { 数学: 120 } }, ranks: {}, fullMarks: { 数学: 120 },
+    },
+  ];
+  renderSeatPage({
+    ...state,
+    exams,
+    settings: { ...state.settings, seatRange: 'all', subject: '数学', showScores: true },
+  });
+  const normalized = nodes.get('seating').innerHTML;
+  assert.match(normalized, /均分 <\/span>70%/, '001 应显示百分制均分 70%');
+  assert.match(normalized, /均分 <\/span>75%/, '002 应显示百分制均分 75%');
+  assert.ok(normalized.includes('百分制'), '标题应说明百分制');
+
+  renderSeatPage({
+    ...state,
+    exams: [exams[0], { ...exams[1], fullMarks: {} }],
+    settings: { ...state.settings, seatRange: 'all', subject: '数学', showScores: true },
+  });
+  const raw = nodes.get('seating').innerHTML;
+  assert.ok(!raw.includes('均分 </span>70%'), '有考试缺满分时回落到原始分');
+  assert.match(raw, /均分 <\/span>84/, '原始平均应为 84 分');
+});
+
 test('座位页单场考试优先使用学校导入的官方班次', () => {
   const officialState = {
     ...state,

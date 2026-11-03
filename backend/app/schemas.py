@@ -49,6 +49,8 @@ class Exam(CamelModel):
     source_format: str = ""
     scores: Dict[str, Dict[str, Optional[float]]] = Field(default_factory=dict)
     ranks: Dict[str, Dict[str, Rank]] = Field(default_factory=dict)
+    # 每科满分；用于把不同满分的考试换算成可比的百分制
+    full_marks: Dict[str, Optional[float]] = Field(default_factory=dict)
 
 
 class DisciplineRecord(CamelModel):
@@ -112,11 +114,13 @@ class ExamCreateRequest(CamelModel):
     scores: Dict[str, Dict[str, Optional[float]]] = Field(default_factory=dict)
     ranks: Dict[str, Dict[str, Rank]] = Field(default_factory=dict)
     source_format: str = Field(default="", max_length=40)
+    full_marks: Dict[str, Optional[float]] = Field(default_factory=dict)
 
 
 class ExamUpdateRequest(CamelModel):
     name: Optional[str] = None
     date: Optional[str] = None
+    full_marks: Optional[Dict[str, Optional[float]]] = None
 
 
 class PdfExamRequest(CamelModel):

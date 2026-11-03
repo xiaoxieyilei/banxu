@@ -223,3 +223,8 @@ body.bubbles-open main{padding-left:revert;padding-right:revert}
 .version-warning{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;background:#fff4df;border-bottom:1px solid #f0d9a8;color:#7a531a;font-size:12px;line-height:1.6}
 .version-warning .small{padding:5px 12px;border-color:#e4c98f;background:#fffaf0;color:#7a531a;white-space:nowrap}
 @media(max-width:760px){.version-warning{padding:9px 14px;font-size:11px}}
+
+/* 考试信息弹窗里的各科满分 */
+.full-marks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px 12px;margin-top:4px}
+.full-mark{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.full-mark input{width:72px;padding:6px 8px;font-size:12px;margin:0}

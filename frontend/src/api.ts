@@ -98,7 +98,7 @@ export const api = {
   parsePdfExam: (fileName: string, data: string): Promise<PdfExamParse> =>
     request('/exams/pdf-parse', { method: 'POST', body: JSON.stringify({ fileName, data }) }),
 
-  updateExam: (id: string, patch: { name?: string; date?: string }): Promise<AppState> =>
+  updateExam: (id: string, patch: { name?: string; date?: string; fullMarks?: Record<string, number | null> }): Promise<AppState> =>
     request(`/exams/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
 
   replaceExam: (id: string, exam: NewExam): Promise<AppState> =>

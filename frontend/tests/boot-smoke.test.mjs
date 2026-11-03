@@ -75,7 +75,7 @@ globalThis.fetch = async (url) => {
     return {
       ok: true,
       status: 200,
-      json: async () => ({ status: 'ok', version: '2.1.0', features: ['seatRange', 'pdfExamImport', 'autoClassRanks'] }),
+      json: async () => ({ status: 'ok', version: '2.1.0', features: ['seatRange', 'pdfExamImport', 'autoClassRanks', 'examFullMarks'] }),
     };
   }
   fetchCount += 1;

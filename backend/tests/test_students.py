@@ -4,7 +4,7 @@ from __future__ import annotations
 def test_health(client):
     body = client.get("/api/health").json()
     assert body["status"] == "ok"
-    assert {"seatRange", "pdfExamImport", "autoClassRanks"} <= set(body["features"])
+    assert {"seatRange", "pdfExamImport", "autoClassRanks", "examFullMarks"} <= set(body["features"])
 
 
 def test_initial_state(client):

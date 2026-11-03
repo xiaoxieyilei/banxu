@@ -35,6 +35,8 @@ export interface Exam {
   sourceFormat: string;
   scores: Record<string, Record<string, number | null>>;
   ranks: Record<string, Record<string, Rank>>;
+  /** 每科满分；用于把不同满分的考试换算成可比成绩 */
+  fullMarks: Record<string, number | null>;
 }
 
 export interface DisciplineRecord {
@@ -91,6 +93,7 @@ export interface NewExam {
   scores: Record<string, Record<string, number | null>>;
   ranks: Record<string, Record<string, Rank>>;
   sourceFormat?: string;
+  fullMarks?: Record<string, number | null>;
 }
 
 export type Category = 'all' | 'excellent' | 'middle' | 'support' | 'ungraded';

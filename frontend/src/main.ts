@@ -93,7 +93,7 @@ async function refreshDiscipline(): Promise<void> {
   }
 }
 
-const REQUIRED_BACKEND_FEATURES = ['seatRange', 'pdfExamImport', 'autoClassRanks'];
+const REQUIRED_BACKEND_FEATURES = ['seatRange', 'pdfExamImport', 'autoClassRanks', 'examFullMarks'];
 
 function showVersionWarning(): void {
   $('#versionWarning')?.classList.remove('hidden');
@@ -466,10 +466,20 @@ function setupExams(): void {
 function renameExam(id: string): void {
   const exam = store.state?.exams.find((item) => item.id === id);
   if (!exam) return;
+  const fullMarkFields = exam.subjects
+    .map((subject) => {
+      const value = exam.fullMarks?.[subject];
+      return `<label class="full-mark"><span>${esc(subject)}</span><input data-full-mark="${esc(
+        subject,
+      )}" type="number" min="0" step="0.1" placeholder="满分" value="${value ?? ''}"></label>`;
+    })
+    .join('');
   openModal(
     '修改考试信息',
     `<div class="form-row"><div class="field"><label for="renameExamInput">考试名称（必填）</label><input id="renameExamInput" maxlength="80" value="${esc(exam.name)}"></div>` +
-      `<div class="field"><label for="renameExamDate">考试时间（必填）</label><input id="renameExamDate" type="date" value="${esc(toISODate(exam.date))}"></div></div>`,
+      `<div class="field"><label for="renameExamDate">考试时间（必填）</label><input id="renameExamDate" type="date" value="${esc(toISODate(exam.date))}"></div></div>` +
+      `<div class="field"><label>各科满分（选填）</label><div class="full-marks-grid">${fullMarkFields}</div>` +
+      `<span style="font-size:11px;color:var(--muted);margin-top:4px">填写后，座位表的平均成绩会按百分制折算；留空表示不折算</span></div>`,
     '<button data-close>取消</button><button class="primary" id="saveExamName">保存信息</button>',
   );
   $('#saveExamName')?.addEventListener('click', () => {
@@ -479,8 +489,14 @@ function renameExam(id: string): void {
       toast('请填写考试名称');
       return;
     }
+    const fullMarks: Record<string, number | null> = {};
+    for (const input of $all<HTMLInputElement>('[data-full-mark]')) {
+      const subject = input.dataset.fullMark ?? '';
+      const raw = input.value.trim();
+      fullMarks[subject] = raw ? Number(raw) : null;
+    }
     guard(async () => {
-      await store.editExam(id, { name, date });
+      await store.editExam(id, { name, date, fullMarks });
       closeModal();
       toast('考试信息已更新');
     });

@@ -90,9 +90,36 @@ export interface AverageTotal extends ScoreResult {
   ranked: number;
 }
 
-/** 给定考试池与科目，算出每位学生的平均分（单场时等于该场分数）与班级排名。 */
-export function scoreRanking(students: Student[], pool: Exam[], subject: string): Map<string, AverageTotal> {
-  const rows = students.map((student) => ({ id: student.id, ...scoreFor(student.id, pool, subject) }));
+/**
+ * 给定考试池与科目，算出每位学生的平均分（单场时等于该场分数）与班级排名。
+ * normalize=true 时按每场该科满分折算成百分制（只在考试池每场都有满分时使用）。
+ */
+export function scoreRanking(
+  students: Student[],
+  pool: Exam[],
+  subject: string,
+  normalize = false,
+): Map<string, AverageTotal> {
+  const rows = students.map((student) => {
+    if (!normalize) return { id: student.id, ...scoreFor(student.id, pool, subject) };
+    const values = pool
+      .map((exam) => {
+        const score = exam.scores?.[student.id]?.[subject];
+        const full = exam.fullMarks?.[subject];
+        if (typeof score !== 'number' || !Number.isFinite(score)) return null;
+        if (typeof full !== 'number' || !Number.isFinite(full) || full <= 0) return null;
+        return (score / full) * 100;
+      })
+      .filter((value): value is number => value !== null);
+    if (!values.length) return { id: student.id, score: null, count: 0, total: pool.length };
+    const sum = values.reduce((acc, value) => acc + value, 0);
+    return {
+      id: student.id,
+      score: Math.round((sum / values.length) * 100) / 100,
+      count: values.length,
+      total: pool.length,
+    };
+  });
   const ordered = rows
     .filter((row) => row.score !== null)
     .sort((a, b) => Number(b.score) - Number(a.score) || a.id.localeCompare(b.id, 'zh-CN', { numeric: true }));

@@ -151,6 +151,11 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
     }
     if (commit) commit.disabled = true;
     const source = ui.importState?.source === 'pdf' ? 'PDF 导入' : 'Excel 导入';
+    const pdf = ui.importState?.source === 'pdf' ? ui.importState.pdf : undefined;
+    const subject = parsed.subjects[0];
+    const pdfFullMarks =
+      pdf?.fullMarks && pdf.fullMarks > 0 && subject ? { [subject]: pdf.fullMarks } : {};
+    const fullMarks = Object.keys(pdfFullMarks).length ? pdfFullMarks : duplicate?.fullMarks ?? {};
     const exam = {
       name,
       date,
@@ -158,6 +163,7 @@ export function openImportModal(store: Store, kind: 'roster' | 'exam'): void {
       scores: parsed.scores,
       ranks: parsed.ranks,
       sourceFormat: source,
+      fullMarks,
     };
     const action = duplicate ? store.replaceExam(duplicate.id, exam) : store.addExam(exam);
     void action

@@ -119,6 +119,23 @@ def validate_score(subject: str, score: float | None) -> None:
         raise DomainError("科目 %s 的成绩不能超过 %d" % (subject, SCORE_MAX))
 
 
+def validate_full_marks(subjects: Iterable[str], full_marks: dict) -> dict:
+    """校验每科满分：只能引用已声明科目，且是 0–10000 的正数；未填的科目不返回。"""
+    subjects = set(subjects)
+    cleaned = {}
+    for subject, value in (full_marks or {}).items():
+        if subject not in subjects:
+            raise DomainError("满分包含未声明的科目：%s" % subject)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value:
+            raise DomainError("科目 %s 的满分必须是数字" % subject)
+        if value <= 0 or value > SCORE_MAX:
+            raise DomainError("科目 %s 的满分必须在 0 到 %d 之间" % (subject, SCORE_MAX))
+        cleaned[subject] = float(value)
+    return cleaned
+
+
 MAX_RANK = 100000
 
 

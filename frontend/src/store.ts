@@ -133,7 +133,7 @@ export class Store {
     });
   }
 
-  editExam(id: string, patch: { name?: string; date?: string }): Promise<AppState> {
+  editExam(id: string, patch: { name?: string; date?: string; fullMarks?: Record<string, number | null> }): Promise<AppState> {
     return this.mutate(() => api.updateExam(id, patch));
   }
 

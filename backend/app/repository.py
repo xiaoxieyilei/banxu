@@ -50,12 +50,11 @@ def load_exams(conn: sqlite3.Connection) -> List[dict]:
     exams = conn.execute("SELECT * FROM exams ORDER BY date DESC, imported_at DESC, id DESC").fetchall()
     result: List[dict] = []
     for exam in exams:
-        subjects = [
-            r["subject"]
-            for r in conn.execute(
-                "SELECT subject FROM exam_subjects WHERE exam_id = ? ORDER BY ordinal", (exam["id"],)
-            ).fetchall()
-        ]
+        subject_rows = conn.execute(
+            "SELECT subject, full_marks FROM exam_subjects WHERE exam_id = ? ORDER BY ordinal", (exam["id"],)
+        ).fetchall()
+        subjects = [r["subject"] for r in subject_rows]
+        full_marks = {r["subject"]: r["full_marks"] for r in subject_rows if r["full_marks"] is not None}
         scores: Dict[str, Dict[str, Optional[float]]] = {}
         ranks: Dict[str, Dict[str, dict]] = {}
         for row in conn.execute(
@@ -78,6 +77,7 @@ def load_exams(conn: sqlite3.Connection) -> List[dict]:
                 "source_format": exam["source_format"],
                 "scores": scores,
                 "ranks": ranks,
+                "full_marks": full_marks,
             }
         )
     return result
@@ -244,7 +244,8 @@ def _validate_exam_payload(
     scores: Dict[str, Dict[str, Optional[float]]],
     ranks: Dict[str, Dict[str, dict]],
     source_format: str,
-) -> Tuple[str, List[str], str]:
+    full_marks: Optional[Dict[str, Optional[float]]] = None,
+) -> Tuple[str, List[str], str, Dict[str, float]]:
     name = name.strip()
     subjects = domain.validate_exam(name, date, subjects)
     if len(scores) > MAX_EXAM_STUDENTS or len(ranks) > MAX_EXAM_STUDENTS:
@@ -267,7 +268,8 @@ def _validate_exam_payload(
     source_format = (source_format or "").strip()
     if len(source_format) > 40:
         raise DomainError("来源说明不超过 40 个字符")
-    return name, subjects, source_format
+    clean_full_marks = domain.validate_full_marks(subjects, full_marks or {})
+    return name, subjects, source_format, clean_full_marks
 
 
 def _insert_exam_rows(
@@ -276,10 +278,13 @@ def _insert_exam_rows(
     subjects: List[str],
     scores: Dict[str, Dict[str, Optional[float]]],
     ranks: Dict[str, Dict[str, dict]],
+    full_marks: Optional[Dict[str, float]] = None,
 ) -> None:
+    full_marks = full_marks or {}
     for index, subject in enumerate(subjects):
         conn.execute(
-            "INSERT INTO exam_subjects (exam_id, subject, ordinal) VALUES (?, ?, ?)", (exam_id, subject, index)
+            "INSERT INTO exam_subjects (exam_id, subject, ordinal, full_marks) VALUES (?, ?, ?, ?)",
+            (exam_id, subject, index, full_marks.get(subject)),
         )
     for sid in sorted(set(list(scores) + list(ranks))):
         per_subject = scores.get(sid, {})
@@ -302,8 +307,11 @@ def create_exam(
     ranks: Dict[str, Dict[str, dict]],
     source_format: str = "",
     exam_id: Optional[str] = None,
+    full_marks: Optional[Dict[str, Optional[float]]] = None,
 ) -> str:
-    name, subjects, source_format = _validate_exam_payload(conn, name, date, subjects, scores, ranks, source_format)
+    name, subjects, source_format, full_marks = _validate_exam_payload(
+        conn, name, date, subjects, scores, ranks, source_format, full_marks
+    )
     exam_id = exam_id or uuid.uuid4().hex
     if conn.execute("SELECT 1 FROM exams WHERE id = ?", (exam_id,)).fetchone():
         raise DomainError("备份中存在重复考试编号", code="duplicate_exam")
@@ -311,7 +319,7 @@ def create_exam(
         "INSERT INTO exams (id, name, date, source_format, imported_at) VALUES (?, ?, ?, ?, ?)",
         (exam_id, name, date, source_format, _now()),
     )
-    _insert_exam_rows(conn, exam_id, subjects, scores, ranks)
+    _insert_exam_rows(conn, exam_id, subjects, scores, ranks, full_marks)
     return exam_id
 
 
@@ -324,18 +332,21 @@ def replace_exam(
     scores: Dict[str, Dict[str, Optional[float]]],
     ranks: Dict[str, Dict[str, dict]],
     source_format: str = "",
+    full_marks: Optional[Dict[str, Optional[float]]] = None,
 ) -> None:
     """用新导入的成绩覆盖同一场考试（保留考试 id，座位表选中的考试不会丢）。"""
     if conn.execute("SELECT 1 FROM exams WHERE id = ?", (exam_id,)).fetchone() is None:
         raise DomainError("考试不存在", status=404, code="exam_not_found")
-    name, subjects, source_format = _validate_exam_payload(conn, name, date, subjects, scores, ranks, source_format)
+    name, subjects, source_format, full_marks = _validate_exam_payload(
+        conn, name, date, subjects, scores, ranks, source_format, full_marks
+    )
     conn.execute("DELETE FROM scores WHERE exam_id = ?", (exam_id,))
     conn.execute("DELETE FROM exam_subjects WHERE exam_id = ?", (exam_id,))
     conn.execute(
         "UPDATE exams SET name = ?, date = ?, source_format = ?, imported_at = ? WHERE id = ?",
         (name, date, source_format, _now(), exam_id),
     )
-    _insert_exam_rows(conn, exam_id, subjects, scores, ranks)
+    _insert_exam_rows(conn, exam_id, subjects, scores, ranks, full_marks)
     settings = _settings_dict(conn)
     if settings["exam_id"] == exam_id and settings["subject"] not in subjects:
         conn.execute("UPDATE settings SET subject = ? WHERE id = 1", (subjects[0],))
@@ -366,7 +377,13 @@ def fill_missing_class_ranks(conn: sqlite3.Connection) -> int:
     return filled
 
 
-def update_exam(conn: sqlite3.Connection, exam_id: str, name: Optional[str], date: Optional[str]) -> None:
+def update_exam(
+    conn: sqlite3.Connection,
+    exam_id: str,
+    name: Optional[str],
+    date: Optional[str],
+    full_marks: Optional[Dict[str, Optional[float]]] = None,
+) -> None:
     row = conn.execute("SELECT * FROM exams WHERE id = ?", (exam_id,)).fetchone()
     if row is None:
         raise DomainError("考试不存在", status=404, code="exam_not_found")
@@ -375,6 +392,28 @@ def update_exam(conn: sqlite3.Connection, exam_id: str, name: Optional[str], dat
     subjects = [r["subject"] for r in conn.execute("SELECT subject FROM exam_subjects WHERE exam_id = ?", (exam_id,))]
     domain.validate_exam(new_name, new_date, subjects)
     conn.execute("UPDATE exams SET name = ?, date = ? WHERE id = ?", (new_name, new_date, exam_id))
+    if full_marks is not None:
+        for subject, value in full_marks.items():
+            if subject not in subjects:
+                raise DomainError("满分包含未声明的科目：%s" % subject)
+            if value is None:
+                conn.execute(
+                    "UPDATE exam_subjects SET full_marks = NULL WHERE exam_id = ? AND subject = ?",
+                    (exam_id, subject),
+                )
+                continue
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or value != value
+                or value <= 0
+                or value > domain.SCORE_MAX
+            ):
+                raise DomainError("科目 %s 的满分必须是 0–%d 之间的正数" % (subject, domain.SCORE_MAX))
+            conn.execute(
+                "UPDATE exam_subjects SET full_marks = ? WHERE exam_id = ? AND subject = ?",
+                (float(value), exam_id, subject),
+            )
 
 
 def delete_exam(conn: sqlite3.Connection, exam_id: str) -> None:
@@ -889,6 +928,7 @@ def replace_state(conn: sqlite3.Connection, state: dict) -> None:
             ranks,
             exam.get("source_format", ""),
             exam.get("id"),
+            exam.get("full_marks", {}),
         )
     for seat_id, student_id in seats.items():
         conn.execute("INSERT INTO seats (seat_id, student_id) VALUES (?, ?)", (seat_id, student_id))

@@ -32,6 +32,8 @@ interface SeatScoreContext {
   subjectOptions: string[];
   pool: ReturnType<typeof examPool>;
   scores: Map<string, AverageTotal>;
+  /** 平均模式是否按各场满分折算成百分制 */
+  normalized: boolean;
   /** 单场考试若官方班次齐全，优先显示学校导入的班次 */
   rankSource: 'official' | 'score';
 }
@@ -44,7 +46,14 @@ export function seatScoreContext(state: AppState): SeatScoreContext {
   const subjectOptions = callSubjectOptions(state.exams, range, examId);
   const subject = resolveSubject(subjectOptions, state.settings.subject, '总分');
   const pool = examPool(state.exams, range, subject, examId);
-  const scores = scoreRanking(state.students, pool, subject);
+  const normalized =
+    range !== 'single' &&
+    pool.length > 0 &&
+    pool.every((exam) => {
+      const full = exam.fullMarks?.[subject];
+      return typeof full === 'number' && Number.isFinite(full) && full > 0;
+    });
+  const scores = scoreRanking(state.students, pool, subject, normalized);
   let rankSource: 'official' | 'score' = 'score';
   if (range === 'single') {
     const exam = state.exams.find((item) => item.id === examId);
@@ -68,13 +77,13 @@ export function seatScoreContext(state: AppState): SeatScoreContext {
       rankSource = 'official';
     }
   }
-  return { range, examId, subject, subjectOptions, pool, scores, rankSource };
+  return { range, examId, subject, subjectOptions, pool, scores, normalized, rankSource };
 }
 
-function scoreMarkup(score: AverageTotal | undefined, single: boolean): string {
+function scoreMarkup(score: AverageTotal | undefined, single: boolean, normalized: boolean): string {
   if (!score || score.score === null) return '<span class="seat-score">暂无成绩</span>';
   const prefix = single ? '' : '<span class="score-prefix">均分 </span>';
-  const unit = single ? ' 分' : '';
+  const unit = single ? ' 分' : normalized ? '%' : '';
   const scoreText = `<span class="seat-score">${prefix}${esc(formatAverage(score.score))}${unit}</span>`;
   const rankText = score.rank === null ? '' : `<span class="seat-rank">班次 ${score.rank}</span>`;
   return scoreText + rankText;
@@ -87,7 +96,9 @@ function scoreTitle(score: AverageTotal | undefined, context: SeatScoreContext):
   const basis =
     context.range === 'single'
       ? `${context.subject} ${value} 分`
-      : `${mode} · ${context.subject} 平均 ${value} 分（${score.count} 场）`;
+      : context.normalized
+        ? `${mode} · ${context.subject} 均分 ${value}%（百分制，${score.count} 场）`
+        : `${mode} · ${context.subject} 平均 ${value} 分（${score.count} 场）`;
   const rankLabel =
     score.rank === null
       ? ''
@@ -123,7 +134,7 @@ function seatMarkup(
     : seatLabel(seatId, state.settings.extraRow);
   const content = student
     ? `<span class="seat-name">${esc(student.name)}</span>${
-        state.settings.showScores ? scoreMarkup(score, single) : ''
+        state.settings.showScores ? scoreMarkup(score, single, context.normalized) : ''
       }`
     : '<span class="empty-plus">＋</span>';
   return (
@@ -199,7 +210,7 @@ export function renderSeatPage(state: AppState): void {
     '#printTitle',
     `${state.settings.className} · 座位表${
       state.settings.showScores
-        ? `（${modeLabel} · ${context.subject}${context.range !== 'single' && context.pool.length ? ` · ${context.pool.length} 场` : ''}）`
+        ? `（${modeLabel} · ${context.subject}${context.normalized ? ' · 百分制' : ''}${context.range !== 'single' && context.pool.length ? ` · ${context.pool.length} 场` : ''}）`
         : ''
     }`,
   );
@@ -241,7 +252,7 @@ function renderWaiting(state: AppState, context: SeatScoreContext): void {
     if (!state.settings.showScores) return studentId;
     const score = context.scores.get(studentId);
     if (!score || score.score === null) return '暂无成绩';
-    const value = `${single ? '' : '均分 '}${formatAverage(score.score)}${single ? ' 分' : ''}`;
+    const value = `${single ? '' : '均分 '}${formatAverage(score.score)}${single ? ' 分' : context.normalized ? '%' : ''}`;
     return `${value}${score.rank === null ? '' : ` · 班次 ${score.rank}`}`;
   };
   setHTML(

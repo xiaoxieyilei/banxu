@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS exam_subjects (
     exam_id TEXT NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
     subject TEXT NOT NULL,
     ordinal INTEGER NOT NULL,
+    full_marks REAL,
     PRIMARY KEY (exam_id, subject)
 );
 
@@ -107,6 +108,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
     if "room" not in discipline_columns:
         conn.execute("ALTER TABLE discipline ADD COLUMN room TEXT NOT NULL DEFAULT ''")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_discipline_room ON discipline(room)")
+    subject_columns = {row["name"] for row in conn.execute("PRAGMA table_info(exam_subjects)").fetchall()}
+    if "full_marks" not in subject_columns:
+        conn.execute("ALTER TABLE exam_subjects ADD COLUMN full_marks REAL")
     # 座位表成绩统计方式：旧库默认「全部考试平均」，与升级前的显示保持一致
     settings_columns = {row["name"] for row in conn.execute("PRAGMA table_info(settings)").fetchall()}
     if "seat_range" not in settings_columns:

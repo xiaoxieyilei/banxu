@@ -203,3 +203,48 @@ def test_replace_missing_exam_returns_404(client):
         json={"name": "x", "date": "2026-10-11", "subjects": ["数学"], "scores": {}, "ranks": {}},
     )
     assert response.status_code == 404
+
+
+def test_exam_full_marks_roundtrip_and_validation(client, seeded):
+    response = client.post(
+        "/api/exams",
+        json={
+            "name": "带满分",
+            "date": "2026-11-06",
+            "subjects": ["数学", "总分"],
+            "scores": {"001": {"数学": 108, "总分": 108}},
+            "ranks": {},
+            "fullMarks": {"数学": 120, "总分": 120},
+        },
+    )
+    assert response.status_code == 201
+    exam = response.json()["exams"][0]
+    assert exam["fullMarks"] == {"数学": 120, "总分": 120}
+
+    exam_id = exam["id"]
+    updated = client.patch("/api/exams/%s" % exam_id, json={"fullMarks": {"数学": 150}}).json()["exams"][0]
+    assert updated["fullMarks"] == {"数学": 150, "总分": 120}
+
+    snapshot = client.get("/api/backup").json()
+    client.put(
+        "/api/exams/%s" % exam_id,
+        json={"name": "替换后", "date": "2026-11-06", "subjects": ["数学"], "scores": {}, "ranks": {}},
+    )
+    restored = client.post("/api/backup", json={"state": snapshot}).json()
+    restored_exam = next(item for item in restored["exams"] if item["id"] == exam_id)
+    assert restored_exam["fullMarks"] == {"数学": 150, "总分": 120}
+
+    bad_subject = client.post(
+        "/api/exams",
+        json={
+            "name": "坏满分",
+            "date": "2026-11-07",
+            "subjects": ["数学"],
+            "scores": {},
+            "ranks": {},
+            "fullMarks": {"英语": 120},
+        },
+    )
+    assert bad_subject.status_code == 400
+    negative = client.patch("/api/exams/%s" % exam_id, json={"fullMarks": {"数学": -1}})
+    assert negative.status_code == 400

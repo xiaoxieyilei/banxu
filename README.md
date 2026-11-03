@@ -179,7 +179,7 @@ backend/
 ## 测试
 
 ```bash
-# 后端（138 项）
+# 后端（139 项）
 cd backend && .venv/bin/python -m pytest -q && cd ..
 
 # 前端（91 项，需先 npm run build）

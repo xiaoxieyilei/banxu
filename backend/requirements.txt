@@ -1,0 +1,6 @@
+# 后端运行依赖（Python 3.9+），版本已固定以便复现
+fastapi==0.128.8
+pydantic==2.13.5
+uvicorn[standard]==0.39.0
+# 解析学校「学生成绩单」PDF（导入考试成绩用）
+pymupdf==1.26.5

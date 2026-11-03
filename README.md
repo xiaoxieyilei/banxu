@@ -2,7 +2,7 @@
 
 给班主任用的本地班级管理工具：**Excel / PDF 导入名单与成绩、拖拽排座、按成绩点名、违纪记录与统计**。
 
-- 项目主页：<https://github.com/yatesyork8675-ui/banxu>
+- 项目主页：<https://github.com/xiaoxieyilei/banxu>
 - **详细使用说明：[docs/使用说明.md](docs/使用说明.md)**
 - 开源协议：[MIT](LICENSE)
 
@@ -28,7 +28,7 @@
 
 Release 里提供 macOS 独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
 
-1. 打开 <https://github.com/yatesyork8675-ui/banxu/releases>，下载最新的 `班序-macOS-arm64.zip`；
+1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新的 `班序-macOS-arm64.zip`；
 2. 解压后把 `班序.app` 拖到「应用程序」；
 3. 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（安装包未做 Apple 公证）；
 4. 之后双击即用，数据保存在 `~/Library/Application Support/班序`，备份在 `~/Documents/班序备份（安装版）`。

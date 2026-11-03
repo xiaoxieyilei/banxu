@@ -1,4 +1,4 @@
-"""每日备份：把完整状态写成 JSON 到指定文件夹（默认 /Users/Apple/Documents/班序备份）。
+"""每日备份：把完整状态写成 JSON 到用户文档目录下的「班序备份」。
 
 备份由软件自身的后台任务完成（每天 21:30）；只有数据相对上一份备份发生变化时才落盘，
 内容没变则跳过，避免同一份数据每天反复生成相同的备份文件。
@@ -18,7 +18,8 @@ from typing import Callable, Optional
 from . import repository
 from .db import read_tx
 
-DEFAULT_BACKUP_DIR = "/Users/Apple/Documents/班序备份"
+# 跨平台：Windows / macOS / Linux 都使用当前用户的主目录，不能写死用户名
+DEFAULT_BACKUP_DIR = Path.home() / "Documents" / "班序备份"
 # 每天 21:30 自动备份（可用 BANXU_BACKUP_AT=HH:MM 覆盖，便于测试）
 DEFAULT_BACKUP_AT = "21:30"
 BACKUP_PATTERN = "班序备份-*.json"
@@ -43,7 +44,7 @@ def backup_time() -> time:
 
 
 def backup_directory() -> Path:
-    return Path(os.environ.get("BANXU_BACKUP_DIR", DEFAULT_BACKUP_DIR))
+    return Path(os.environ.get("BANXU_BACKUP_DIR", str(DEFAULT_BACKUP_DIR))).expanduser()
 
 
 def backup_filename(now: Optional[datetime] = None) -> str:

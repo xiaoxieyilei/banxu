@@ -139,3 +139,12 @@ def test_exam_import_writes_backup_immediately(client, seeded, tmp_path, monkeyp
     assert response.status_code == 201
     path = target / ("班序备份-%s.json" % datetime.now().strftime("%Y-%m-%d"))
     assert path.exists()
+
+
+def test_default_backup_dir_uses_current_user(monkeypatch):
+    from pathlib import Path
+
+    monkeypatch.delenv("BANXU_BACKUP_DIR", raising=False)
+    expected = Path.home() / "Documents" / "班序备份"
+    assert backup_service.backup_directory() == expected
+    assert "/Users/Apple" not in str(expected) or str(Path.home()) == "/Users/Apple"

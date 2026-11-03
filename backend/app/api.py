@@ -384,7 +384,7 @@ def backup_status(conn: sqlite3.Connection = Depends(db_session)) -> dict:
 
 @router.post("/backup/export", response_model=BackupExportResult)
 def export_backup(conn: sqlite3.Connection = Depends(db_session)) -> dict:
-    """立即把完整状态写到备份文件夹（默认 /Users/Apple/Documents/班序备份）。"""
+    """立即把完整状态写到备份文件夹（默认当前用户文档目录/班序备份）。"""
     return backup_service.write_backup(conn, force=True)
 
 

@@ -97,6 +97,9 @@ def backup_source() -> Path:
         "run.sh",
         "启动班序.command",
         "启动班序（手机访问）.command",
+        "启动班序.bat",
+        "启动班序（手机访问）.bat",
+        "scripts/start-windows.ps1",
         "README.md",
         "LICENSE",
         "VERSION",
@@ -155,6 +158,7 @@ def make_executable() -> None:
         "scripts/install-launchagent.command",
         "scripts/uninstall-launchagent.command",
         "scripts/apply_update.py",
+        "scripts/start-windows.ps1",
     ):
         path = ROOT / name
         if path.exists():
@@ -269,12 +273,25 @@ def main() -> int:
             server_log = DATA_DIR / "update-server.log"
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             handle = server_log.open("ab")
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
             subprocess.Popen(
-                ["/bin/bash", str(ROOT / "scripts" / "start-server.sh")],
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "app.main:app",
+                    "--app-dir",
+                    "backend",
+                    "--host",
+                    args.host,
+                    "--port",
+                    str(args.port),
+                ],
                 cwd=str(ROOT),
                 stdout=handle,
                 stderr=handle,
-                start_new_session=True,
+                start_new_session=os.name != "nt",
+                creationflags=creationflags,
                 close_fds=True,
                 env=env,
             )

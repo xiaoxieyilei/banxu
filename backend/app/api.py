@@ -37,7 +37,9 @@ from .schemas import (
     StudentUpdateRequest,
 )
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
+# 前端启动时会核对这些能力；缺少说明后端进程仍是旧版本
+FEATURES = ("seatRange", "pdfExamImport", "autoClassRanks")
 router = APIRouter(prefix="/api")
 
 
@@ -82,7 +84,7 @@ def logout(response: Response) -> dict:
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> dict:
-    return {"status": "ok", "version": VERSION}
+    return {"status": "ok", "version": VERSION, "features": list(FEATURES)}
 
 
 @router.get("/state", response_model=AppState)

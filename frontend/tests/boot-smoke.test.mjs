@@ -71,6 +71,13 @@ globalThis.fetch = async (url) => {
   if (target.includes('/api/auth/status')) {
     return { ok: true, status: 200, json: async () => ({ required: false, authenticated: true }) };
   }
+  if (target.includes('/api/health')) {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'ok', version: '2.1.0', features: ['seatRange', 'pdfExamImport', 'autoClassRanks'] }),
+    };
+  }
   fetchCount += 1;
   return { ok: true, status: 200, json: async () => state };
 };

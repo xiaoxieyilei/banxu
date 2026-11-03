@@ -93,8 +93,25 @@ async function refreshDiscipline(): Promise<void> {
   }
 }
 
+const REQUIRED_BACKEND_FEATURES = ['seatRange', 'pdfExamImport', 'autoClassRanks'];
+
+function showVersionWarning(): void {
+  $('#versionWarning')?.classList.remove('hidden');
+}
+
+async function checkBackendFeatures(): Promise<void> {
+  try {
+    const health = await api.health();
+    const features = new Set(health.features ?? []);
+    if (REQUIRED_BACKEND_FEATURES.some((name) => !features.has(name))) showVersionWarning();
+  } catch {
+    // health 只是提示，失败不阻塞使用
+  }
+}
+
 function guard(action: () => Promise<unknown>): void {
-  void action().catch((error: Error) => {
+  void action().catch((error: Error & { status?: number }) => {
+    if (error.status === 422 && /Extra inputs|extra_forbidden/i.test(error.message)) showVersionWarning();
     toast(error.message);
     // 失败时按服务端状态重绘，避免下拉/复选框停留在未保存的值
     render();
@@ -651,6 +668,8 @@ async function boot(): Promise<void> {
     toast(`加载失败：${(error as Error).message}`);
     return;
   }
+  void checkBackendFeatures();
+  $('#dismissVersionWarning')?.addEventListener('click', () => $('#versionWarning')?.classList.add('hidden'));
   store.subscribe(() => render());
   setupNavigation();
   setupHeader();

@@ -58,7 +58,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 type Json = Record<string, unknown>;
 
+export interface HealthInfo {
+  status: string;
+  version: string;
+  features?: string[];
+}
+
 export const api = {
+  health: (): Promise<HealthInfo> => request('/health'),
+
   state: (): Promise<AppState> => request('/state'),
 
   importRoster: (records: Student[]): Promise<AppState> =>

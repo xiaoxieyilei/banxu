@@ -71,6 +71,7 @@ class AppState(CamelModel):
 class HealthResponse(CamelModel):
     status: str
     version: str
+    features: List[str] = Field(default_factory=list)
 
 
 # ---------- 请求体 ----------

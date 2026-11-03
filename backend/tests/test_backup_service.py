@@ -105,3 +105,18 @@ def test_backup_status_reports_latest(client, seeded, tmp_path, monkeypatch):
 
     client.patch("/api/settings", json={"className": "高一(20)班"})
     assert client.get("/api/backup/status").json()["pendingChanges"] is True
+
+
+def test_startup_backup_writes_pending_changes(client, seeded, tmp_path, monkeypatch):
+    target = tmp_path / "启动备份"
+    monkeypatch.setenv("BANXU_BACKUP_DIR", str(target))
+    monkeypatch.setenv("BANXU_BACKUP_ON_START", "1")
+    result = backup_service.startup_backup(client.app.state.connect)
+    assert result is not None
+    assert not result.get("skipped")
+    assert (target / ("班序备份-%s.json" % datetime.now().strftime("%Y-%m-%d"))).exists()
+
+
+def test_startup_backup_can_be_disabled(client, seeded, monkeypatch):
+    monkeypatch.setenv("BANXU_BACKUP_ON_START", "0")
+    assert backup_service.startup_backup(client.app.state.connect) is None

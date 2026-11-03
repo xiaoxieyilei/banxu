@@ -146,9 +146,17 @@ def write_backup(conn, now: Optional[datetime] = None, force: bool = False) -> d
             return result
 
     directory = backup_directory()
-    directory.mkdir(parents=True, exist_ok=True)
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        os.chmod(directory, 0o700)
+    except OSError:
+        pass
     path = directory / backup_filename(moment)
     path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
     result = {
         "path": str(path),
         "savedAt": moment.isoformat(timespec="seconds"),
@@ -157,6 +165,17 @@ def write_backup(conn, now: Optional[datetime] = None, force: bool = False) -> d
     }
     logger.info("已写入备份：%s（%d 名学生 / %d 场考试）", path, result["students"], result["exams"])
     return result
+
+
+def startup_backup(connect: Callable) -> Optional[dict]:
+    """应用启动时补一次备份；数据没变会自动跳过。测试可用 BANXU_BACKUP_ON_START=0 关闭。"""
+    if os.environ.get("BANXU_BACKUP_ON_START", "1") != "1":
+        return None
+    conn = connect()
+    try:
+        return write_backup(conn)
+    finally:
+        conn.close()
 
 
 def backup_status(conn=None, now: Optional[datetime] = None) -> dict:

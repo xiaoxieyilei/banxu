@@ -35,8 +35,16 @@ def _cors_origins() -> list:
 
 
 def create_app(db_path: Optional[str] = None) -> FastAPI:
+    # 数据库、备份文件里都是学生数据：进程新建文件默认仅本人可读写
+    os.umask(0o077)
+
     @asynccontextmanager
     async def lifespan(application: FastAPI):
+        # 启动时先补一次：如果 21:30 时软件没开着，下次启动仍能落盘最新数据
+        try:
+            await asyncio.to_thread(backup_service.startup_backup, application.state.connect)
+        except Exception:
+            logger.exception("启动补备份失败")
         task = asyncio.create_task(backup_service.daily_backup_loop(application.state.connect))
         try:
             yield
@@ -116,7 +124,6 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
         return await call_next(request)
 
     app.include_router(router)
-    logger.info("访问口令：%s（手机/其他设备打开时输入）", auth.password())
 
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if dist.is_dir():

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -86,6 +87,14 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA foreign_keys = ON")
+    # 学生数据的数据库与 WAL/SHM 只允许当前用户读写（旧库升级后也会被纠正）
+    for suffix in ("", "-wal", "-shm"):
+        candidate = Path(str(target) + suffix)
+        try:
+            if candidate.exists():
+                os.chmod(candidate, 0o600)
+        except OSError:
+            pass
     return conn
 
 

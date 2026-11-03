@@ -27,11 +27,19 @@ def password() -> str:
     if PASSWORD_FILE.exists():
         saved = PASSWORD_FILE.read_text(encoding="utf-8").strip()
         if saved:
+            try:
+                os.chmod(PASSWORD_FILE, 0o600)
+            except OSError:
+                pass
             _cached_password = saved
             return saved
     PASSWORD_FILE.parent.mkdir(parents=True, exist_ok=True)
     generated = "".join(secrets.choice("abcdefghjkmnpqrstuvwxyz23456789") for _ in range(8))
     PASSWORD_FILE.write_text(generated, encoding="utf-8")
+    try:
+        os.chmod(PASSWORD_FILE, 0o600)
+    except OSError:
+        pass
     _cached_password = generated
     return generated
 

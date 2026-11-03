@@ -218,3 +218,8 @@ body.bubbles-open main{padding-left:revert;padding-right:revert}
 
 /* 窄屏座位卡：隐藏“均分”前缀并缩小字号，避免平均分被截断 */
 @media(max-width:1250px){.seat-score .score-prefix{display:none}.seat-score,.seat-rank{font-size:10px}}
+
+/* 后端版本过旧时的提示条 */
+.version-warning{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 24px;background:#fff4df;border-bottom:1px solid #f0d9a8;color:#7a531a;font-size:12px;line-height:1.6}
+.version-warning .small{padding:5px 12px;border-color:#e4c98f;background:#fffaf0;color:#7a531a;white-space:nowrap}
+@media(max-width:760px){.version-warning{padding:9px 14px;font-size:11px}}

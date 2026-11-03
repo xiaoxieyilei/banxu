@@ -71,6 +71,9 @@ globalThis.fetch = async (url) => {
   if (target.includes('/api/auth/status')) {
     return { ok: true, status: 200, json: async () => ({ required: false, authenticated: true }) };
   }
+  if (target.includes('/api/update/check')) {
+    return { ok: true, status: 200, json: async () => ({ configured: false, current: '2.1.0', available: false }) };
+  }
   if (target.includes('/api/health')) {
     return {
       ok: true,

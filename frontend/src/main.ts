@@ -1,4 +1,5 @@
 import type { AppState, CallRange, Category, ClassSettings } from './types.js';
+import type { UpdateInfo } from './api.js';
 import { api } from './api.js';
 import { store } from './store.js';
 import { sortExams, toISODate } from './lib/dates.js';
@@ -148,11 +149,115 @@ function setupNavigation(): void {
   }
 }
 
+let updateTimer: number | undefined;
+let updateInFlight = false;
+
+function updateButton(info?: UpdateInfo): void {
+  const button = $('#updateBtn') as HTMLButtonElement | null;
+  if (!button) return;
+  if (info?.configured && info.available && info.latest) {
+    button.textContent = `更新到 ${info.latest}`;
+    button.classList.add('primary');
+  } else {
+    button.textContent = '检查更新';
+    button.classList.remove('primary');
+  }
+}
+
+async function checkUpdates(silent = false): Promise<void> {
+  if (updateInFlight) return;
+  updateInFlight = true;
+  try {
+    const info = await api.checkUpdate(true);
+    updateButton(info);
+    if (!info.configured) {
+      if (!silent) toast(info.message || '尚未配置 GitHub 更新仓库');
+      return;
+    }
+    if (info.available && info.latest) {
+      if (!silent) showUpdateDialog(info);
+    } else if (!silent) {
+      toast(`已是最新版本（${info.current}）`);
+    }
+  } catch (error) {
+    if (!silent) toast((error as Error).message);
+  } finally {
+    updateInFlight = false;
+  }
+}
+
+function showUpdateDialog(info: UpdateInfo): void {
+  const notes = (info.notes || '').trim();
+  openModal(
+    '发现新版本',
+    `<p>当前版本 <b>${esc(info.current)}</b>，GitHub 最新版本 <b>${esc(info.latest ?? '')}</b>。</p>` +
+      (info.publishedAt ? `<p>发布时间：${esc(info.publishedAt.replace('T', ' ').slice(0, 16))}</p>` : '') +
+      (notes ? `<pre class="update-notes">${esc(notes.slice(0, 4000))}</pre>` : '<p>该版本没有附带更新说明。</p>') +
+      '<p class="hint">更新会保留学生、成绩、座位和备份数据，并自动重新构建前端、重启班序服务。</p>',
+    '<button data-close>稍后</button><button class="primary" id="applyUpdateBtn">立即更新</button>',
+  );
+  $('#applyUpdateBtn')?.addEventListener('click', () => {
+    if (!info.latest) return;
+    const button = $('#applyUpdateBtn') as HTMLButtonElement | null;
+    if (button) {
+      button.disabled = true;
+      button.textContent = '正在下载…';
+    }
+    void api
+      .applyUpdate(info.latest)
+      .then(() => {
+        closeModal();
+        toast('更新已开始，完成后页面会自动刷新');
+        pollUpdateStatus();
+      })
+      .catch((error: Error) => {
+        if (button) {
+          button.disabled = false;
+          button.textContent = '立即更新';
+        }
+        toast(error.message);
+      });
+  });
+}
+
+function pollUpdateStatus(): void {
+  if (updateTimer) window.clearInterval(updateTimer);
+  let attempts = 0;
+  updateTimer = window.setInterval(async () => {
+    attempts += 1;
+    try {
+      const status = await api.updateStatus();
+      if (status.phase === 'done') {
+        window.clearInterval(updateTimer);
+        updateTimer = undefined;
+        toast('更新完成，正在刷新页面…');
+        window.setTimeout(() => location.reload(), 800);
+        return;
+      }
+      if (status.phase === 'error') {
+        window.clearInterval(updateTimer);
+        updateTimer = undefined;
+        toast(status.message || '更新失败，请查看 backend/data/update.log');
+        void checkUpdates(true);
+        return;
+      }
+    } catch {
+      // 重启期间请求会短暂失败，继续轮询
+    }
+    if (attempts > 160) {
+      window.clearInterval(updateTimer);
+      updateTimer = undefined;
+      toast('更新仍在进行，请稍后手动刷新页面');
+    }
+  }, 1500);
+}
+
 function setupHeader(): void {
   const className = $('#className') as HTMLInputElement | null;
   className?.addEventListener('change', () => {
     guard(() => store.updateSettings({ className: className.value.trim() || '我的班级' }));
   });
+  $('#updateBtn')?.addEventListener('click', () => void checkUpdates(false));
   $('#localBackupBtn')?.addEventListener('click', () => {
     guard(async () => {
       const result = await api.exportBackupToFolder();
@@ -709,6 +814,7 @@ async function boot(): Promise<void> {
   setupGlobal();
   setPage('seat');
   render();
+  void checkUpdates(true);
 }
 
 setupLogin();

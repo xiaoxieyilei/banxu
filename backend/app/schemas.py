@@ -117,6 +117,10 @@ class ExamCreateRequest(CamelModel):
     full_marks: Dict[str, Optional[float]] = Field(default_factory=dict)
 
 
+class UpdateApplyRequest(CamelModel):
+    tag: str = Field(min_length=1, max_length=120)
+
+
 class ExamUpdateRequest(CamelModel):
     name: Optional[str] = None
     date: Optional[str] = None

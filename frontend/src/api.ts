@@ -58,6 +58,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 type Json = Record<string, unknown>;
 
+export interface UpdateInfo {
+  configured: boolean;
+  current: string;
+  available: boolean;
+  latest?: string;
+  url?: string;
+  notes?: string;
+  publishedAt?: string;
+  kind?: string;
+  repo?: string;
+  message?: string;
+}
+
+export interface UpdateStatus {
+  phase: 'idle' | 'downloading' | 'applying' | 'installing' | 'building' | 'restarting' | 'done' | 'error' | string;
+  message?: string;
+  tag?: string;
+  current?: string;
+  updatedAt?: string;
+}
+
 export interface HealthInfo {
   status: string;
   version: string;
@@ -159,6 +180,14 @@ export const api = {
 
   restore: (state: AppState): Promise<AppState> =>
     request('/backup', { method: 'POST', body: JSON.stringify({ state }) }),
+
+  checkUpdate: (force = false): Promise<UpdateInfo> =>
+    request(`/update/check${force ? '?force=true' : ''}`),
+
+  updateStatus: (): Promise<UpdateStatus> => request('/update/status'),
+
+  applyUpdate: (tag: string): Promise<{ ok: boolean; tag: string }> =>
+    request('/update/apply', { method: 'POST', body: JSON.stringify({ tag }) }),
 };
 
 export type { Json };

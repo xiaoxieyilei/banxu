@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import base64
 import logging
+from pathlib import Path
 import os
 import sqlite3
 from typing import Iterator, Optional
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 
-from . import auth, backup_service, domain, pdf_exam, repository
+from . import auth, backup_service, domain, pdf_exam, repository, updater
 from .db import read_tx, write_tx
 from .domain import DomainError
 from .schemas import (
@@ -37,11 +38,20 @@ from .schemas import (
     SettingsUpdateRequest,
     StudentCreateRequest,
     StudentUpdateRequest,
+    UpdateApplyRequest,
 )
 
 logger = logging.getLogger("banxu.api")
 
-VERSION = "2.1.0"
+def _read_version() -> str:
+    try:
+        text = (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
+        return text or "2.1.0"
+    except OSError:
+        return "2.1.0"
+
+
+VERSION = _read_version()
 # 前端启动时会核对这些能力；缺少说明后端进程仍是旧版本
 FEATURES = ("seatRange", "pdfExamImport", "autoClassRanks", "examFullMarks")
 router = APIRouter(prefix="/api")
@@ -147,6 +157,28 @@ def delete_student(student_id: str, conn: sqlite3.Connection = Depends(db_sessio
     with write_tx(conn):
         repository.delete_student(conn, student_id)
     return state_of(conn)
+
+
+# ---------- 自动更新 ----------
+
+
+@router.get("/update/check")
+def update_check(force: bool = Query(False)) -> dict:
+    return updater.check_for_update(force=force)
+
+
+@router.get("/update/status")
+def update_status() -> dict:
+    return updater.status()
+
+
+@router.post("/update/apply")
+def update_apply(payload: UpdateApplyRequest) -> dict:
+    current = updater.status()
+    if current.get("phase") in {"downloading", "applying", "installing", "building", "restarting"}:
+        raise DomainError("已有更新正在进行，请稍候", status=409, code="update_busy")
+    host, port = updater.server_bind()
+    return updater.apply_update(payload.tag, host, int(port), parent_pid=None)
 
 
 # ---------- 考试 ----------

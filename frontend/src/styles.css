@@ -228,3 +228,6 @@ body.bubbles-open main{padding-left:revert;padding-right:revert}
 .full-marks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px 12px;margin-top:4px}
 .full-mark{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .full-mark input{width:72px;padding:6px 8px;font-size:12px;margin:0}
+
+/* GitHub 更新对话框 */
+.update-notes{max-height:220px;overflow:auto;background:#f7f9f4;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.7;white-space:pre-wrap}

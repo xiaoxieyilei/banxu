@@ -169,7 +169,7 @@ python packaging/build_binary.py
 # Linux：  packaging/dist/banxu-linux-x64.tar.gz
 ```
 
-自动构建 Windows/Linux/macOS 的 GitHub Actions workflow 已准备好，但当前仓库 token 缺少 `workflow` 权限，尚未启用；对应 Issue #8。
+Windows/Linux 安装包目前由维护者构建并上传；三平台自动构建流水线在 Issue #8 中继续完善。
 
 ## 发布新版本
 

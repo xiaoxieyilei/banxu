@@ -27,14 +27,16 @@
 
 ## 下载安装包（无需 Python/Node）
 
-Release 里提供 macOS 独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
+Release 提供独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
 
-1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新的 `banxu-macOS-arm64.zip`；
-2. 解压后把 `班序.app` 拖到「应用程序」；
-3. 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（安装包未做 Apple 公证）；
-4. 之后双击即用，数据保存在 `~/Library/Application Support/班序`，备份在 `~/Documents/班序备份（安装版）`。
+1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新资产：
+   - macOS Apple Silicon：`banxu-macOS-arm64.zip`，解压后把 `班序.app` 拖到「应用程序」；
+   - Windows 10/11：`banxu-windows-x64.zip`，解压后双击 `启动班序.bat`；
+   - Linux x64：`banxu-linux-x64.tar.gz`，解压后运行 `./启动班序.sh`；
+2. macOS 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（未做 Apple 公证）；
+3. 数据目录：macOS `~/Library/Application Support/班序`，Windows `%APPDATA%\班序`，Linux `~/.local/share/班序`；备份在用户「文档/班序备份（安装版）」。
 
-> 当前 Release 只提供 macOS Apple Silicon 安装包；Intel Mac / Windows / Linux 可先用源码启动，安装包在 TODO issue 中。
+> Windows/Linux 资产为 v2.2.0 实验包，当前环境无法真机验证；如启动失败请把 `server.log` 发到 Issue #1。macOS Intel 安装包仍在 Issue #2。
 
 ## 快速开始
 

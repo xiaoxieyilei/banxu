@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 from .domain import DomainError
+from . import packaged_update
 
 ROOT = Path(os.environ.get("BANXU_APP_ROOT", getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2])))
 VERSION_FILE = ROOT / "VERSION"
@@ -93,6 +94,7 @@ def fetch_latest(repo: str) -> Optional[dict]:
             "notes": str(release.get("body") or ""),
             "publishedAt": str(release.get("published_at") or ""),
             "zipball": str(release.get("zipball_url") or ""),
+            "assets": release.get("assets") or [],
             "kind": "release",
         }
     tags = _github_json("https://api.github.com/repos/%s/tags?per_page=10" % repo)
@@ -105,6 +107,7 @@ def fetch_latest(repo: str) -> Optional[dict]:
                 "notes": "",
                 "publishedAt": "",
                 "zipball": "https://api.github.com/repos/%s/zipball/%s" % (repo, urllib.parse.quote(tag)),
+                "assets": [],
                 "kind": "tag",
             }
     return None
@@ -127,6 +130,7 @@ def check_for_update(force: bool = False) -> dict:
     if not force and _check_cache["data"] and now - _check_cache["at"] < CACHE_SECONDS:
         return _check_cache["data"]
     latest = fetch_latest(repo)
+    asset_name = packaged_update.asset_name()
     if latest is None:
         data = {
             "configured": True,
@@ -135,9 +139,11 @@ def check_for_update(force: bool = False) -> dict:
             "message": "仓库还没有 Release 或 Tag",
             "repo": repo,
             "packaged": packaged,
-            "applySupported": not packaged,
+            "applySupported": False if packaged else True,
+            "assetName": asset_name or None,
         }
     else:
+        asset = packaged_update.asset_entry(latest, asset_name)
         data = {
             "configured": True,
             "current": current,
@@ -149,7 +155,8 @@ def check_for_update(force: bool = False) -> dict:
             "kind": latest["kind"],
             "repo": repo,
             "packaged": packaged,
-            "applySupported": not packaged,
+            "applySupported": (not packaged) or bool(asset),
+            "assetName": asset_name or None,
         }
     _check_cache["at"] = now
     _check_cache["data"] = data
@@ -166,6 +173,7 @@ def _resolve_tag(repo: str, tag: str) -> dict:
             "notes": str(release.get("body") or ""),
             "publishedAt": str(release.get("published_at") or ""),
             "zipball": str(release.get("zipball_url") or ""),
+            "assets": release.get("assets") or [],
             "kind": "release",
         }
     tags = _github_json("https://api.github.com/repos/%s/tags?per_page=100" % repo)
@@ -176,6 +184,7 @@ def _resolve_tag(repo: str, tag: str) -> dict:
             "notes": "",
             "publishedAt": "",
             "zipball": "https://api.github.com/repos/%s/zipball/%s" % (repo, encoded),
+            "assets": [],
             "kind": "tag",
         }
     raise DomainError("该版本不存在或不属于配置的仓库", status=404, code="update_tag_missing")
@@ -218,11 +227,7 @@ def _allowed_zipball(url: str) -> bool:
 
 def apply_update(tag: str, host: str, port: int, parent_pid: Optional[int] = None) -> dict:
     if os.environ.get("BANXU_PACKAGED") == "1":
-        raise DomainError(
-            "这是打包版，请从 GitHub Releases 下载新的安装包覆盖旧版本",
-            status=400,
-            code="packaged_update_required",
-        )
+        return packaged_update.apply(sys.modules[__name__], tag, host, port)
     repo = repo_slug()
     if not repo:
         raise DomainError("尚未配置 GitHub 更新仓库", status=400, code="update_unconfigured")

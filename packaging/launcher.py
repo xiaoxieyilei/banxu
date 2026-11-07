@@ -65,7 +65,8 @@ def main() -> int:
 
     port = next((candidate for candidate in range(8000, 8020) if port_free(candidate)), 8000)
     url = "http://127.0.0.1:%d" % port
-    threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+    if os.environ.get("BANXU_NO_BROWSER") != "1":
+        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
     sys.path.insert(0, str(Path(__file__).resolve().parent / "backend"))
     import uvicorn

@@ -194,8 +194,10 @@ function showUpdateDialog(info: UpdateInfo): void {
       (info.publishedAt ? `<p>发布时间：${esc(info.publishedAt.replace('T', ' ').slice(0, 16))}</p>` : '') +
       (notes ? `<pre class="update-notes">${esc(notes.slice(0, 4000))}</pre>` : '<p>该版本没有附带更新说明。</p>') +
       (info.applySupported === false
-        ? `<p class="hint">这是安装版，请从 <a href="${esc(info.url || '#')}" target="_blank" rel="noreferrer">GitHub Releases</a> 下载新的安装包覆盖旧版本；学生数据保存在本机，不会丢失。</p>`
-        : '<p class="hint">更新会保留学生、成绩、座位和备份数据，并自动重新构建前端、重启班序服务。</p>'),
+        ? `<p class="hint">这个版本暂时没有当前平台的自动更新包，请从 <a href="${esc(info.url || '#')}" target="_blank" rel="noreferrer">GitHub Releases</a> 下载新安装包。</p>`
+        : info.packaged
+          ? '<p class="hint">安装版会自动下载新包、替换应用并重启；学生数据在独立数据目录中，不需要备份迁移。</p>'
+          : '<p class="hint">更新会保留学生、成绩、座位和备份数据，并自动重新构建前端、重启班序服务。</p>'),
     info.applySupported === false
       ? '<button data-close>知道了</button>'
       : '<button data-close>稍后</button><button class="primary" id="applyUpdateBtn">立即更新</button>',
@@ -241,7 +243,7 @@ function pollUpdateStatus(): void {
       if (status.phase === 'error') {
         window.clearInterval(updateTimer);
         updateTimer = undefined;
-        toast(status.message || '更新失败，请查看 backend/data/update.log');
+        toast(status.message || '更新失败，请查看软件数据目录里的 update.log');
         void checkUpdates(true);
         return;
       }

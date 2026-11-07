@@ -2,7 +2,7 @@
 
 给班主任用的本地班级管理工具：**名单 / 成绩 / 座位 / 违纪 / 寝室 / 备份**，数据保存在本机，支持手机浏览器访问。
 
-**版本 2.2.1** · [MIT](LICENSE) · macOS / Windows / Linux
+**版本 2.2.2** · [MIT](LICENSE) · macOS / Windows / Linux
 
 - 项目主页：<https://github.com/xiaoxieyilei/banxu>
 - **详细使用说明：[docs/使用说明.md](docs/使用说明.md)**
@@ -32,9 +32,11 @@
 | Windows | `%APPDATA%\班序` | `文档\班序备份（安装版）` |
 | Linux | `~/.local/share/班序` | `~/Documents/班序备份（安装版）` |
 
-- Windows/Linux 包是 **v2.2.1 实验包**，内含 Python 运行时和前端，不需要安装环境；如启动失败，请把数据目录里的 `server.log` 发到 [Issue #1](https://github.com/xiaoxieyilei/banxu/issues/1)。
+- Windows/Linux 包是 **v2.2.2 实验包**，内含 Python 运行时和前端，不需要安装环境；如启动失败，请把数据目录里的 `server.log` 发到 [Issue #1](https://github.com/xiaoxieyilei/banxu/issues/1)。
 - macOS Intel 安装包、签名公证、安装包自动更新分别跟踪在 Issue #2、#3。
 - 安装包版和源码版是**独立数据目录**；迁移时先在源码版「导出备份」，再在安装包版「恢复备份」。
+
+> **v2.2.2 起，安装包版支持软件内直接升级**：点「检查更新 → 立即更新」，应用会自动下载新包、替换自身并重启，数据目录不变，不需要重新下载或迁移。旧安装包需要先手动装一次 v2.2.2，之后才能使用这个能力。
 
 ## 从源码运行
 
@@ -73,7 +75,7 @@ Windows 源码启动：双击 `启动班序.bat`；macOS：双击 `启动班序.
 - **寝室违纪**：按寝室聚合事件（同寝室同一天同备注算 1 次）；可整间登记，也可在「＋ 记一次」中只勾选实际涉及的成员；学生调寝后历史事件仍归属原寝室并标注「已调出」。
 - **满分口径**：考试信息可填每科满分；PDF 自动带入；用于不同满分考试的百分制比较。
 - **数据安全**：本机 SQLite；导出/恢复 JSON 备份；顶部「↶ 撤销」或 ⌘Z 全局撤销最近 30 步。
-- **自动更新**：源码版顶部「检查更新」可下载、重建、重启；安装包版提示从 Releases 下载新安装包。
+- **自动更新**：源码版顶部「检查更新」可下载、重建、重启；安装包版（v2.2.2+）会下载平台安装包、自动替换应用并重启，数据无需迁移。
 - **手机访问**：`启动班序（手机访问）.command`（macOS）/ `.bat`（Windows）监听 `0.0.0.0`，手机经同一 Wi-Fi 或 Tailscale 打开 `http://<电脑IP>:8000`，使用访问口令登录。
 - **自动备份**：每天 21:30 检查一次，数据有变化才写入「文档/班序备份/班序备份-YYYY-MM-DD.json」；启动时补一次；页面右上角可手动备份。
 
@@ -178,9 +180,9 @@ Windows/Linux 安装包目前由维护者构建并上传；三平台自动构建
 3. 打标签并创建 Release：
 
 ```bash
-git tag v2.2.1
+git tag v2.2.2
 git push origin main --tags
-gh release create v2.2.1 --generate-notes
+gh release create v2.2.2 --generate-notes
 ```
 
 4. 上传安装包资产：
@@ -188,7 +190,7 @@ gh release create v2.2.1 --generate-notes
    - `packaging/dist/banxu-windows-x64.zip`
    - `packaging/dist/banxu-linux-x64.tar.gz`
    - 对应 `.sha256`；
-5. 源码版用户点「检查更新」即可升级；安装包版用户到 Releases 下载新包。
+5. 源码版用户点「检查更新」即可升级；安装包版（v2.2.2+）也直接点「立即更新」升级。
 
 更新仓库配置在 `update.json`，只允许从该仓库的 Release/Tag 下载。
 

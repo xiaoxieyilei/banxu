@@ -14,7 +14,7 @@
 | 平台 | Release 资产 | 状态 |
 |---|---|---|
 | macOS Apple Silicon | `banxu-macOS-arm64.zip` | ✅ 已在本机实测 |
-| Windows 10/11 x64 | `banxu-windows-x64.zip` | 🧪 内置运行时，尚未真机验证 |
+| Windows 10/11 x64 | `banxu-windows-x64.zip` | 🧪 内置运行时，用康辉的真机验证了 |
 | Linux x64 | `banxu-linux-x64.tar.gz` | 🧪 内置运行时，尚未真机验证 |
 
 安装步骤：

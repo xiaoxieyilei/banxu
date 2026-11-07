@@ -67,6 +67,7 @@ def main() -> int:
     url = "http://127.0.0.1:%d" % port
     threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "backend"))
     import uvicorn
 
     from app.main import create_app

@@ -661,20 +661,53 @@ def save_dorm(
             )
 
 
-def add_dorm_discipline(conn: sqlite3.Connection, room: str, date: str, reason: str = "") -> int:
-    """整间记一次寝室违纪：该寝室每名成员各记一条，统计侧按一次事件计算。"""
+def add_dorm_discipline(
+    conn: sqlite3.Connection,
+    room: str,
+    date: str,
+    reason: str = "",
+    student_ids: Optional[Iterable[str]] = None,
+) -> int:
+    """登记一次寝室违纪；可选择该寝室中的部分成员，统计侧仍按一次事件计算。
+
+    student_ids 省略/为 None 时兼容旧客户端，默认整间每人一条。
+    """
     room = room.strip()
     members = _room_members(conn, room)
     if not members:
         raise DomainError("寝室 %s 还没有登记学生" % room, status=404, code="dorm_empty")
     domain.validate_discipline(date, "寝室违纪", reason)
-    for student_id in members:
+    member_set = set(members)
+    if student_ids is None:
+        selected = members
+    else:
+        selected = [str(student_id).strip() for student_id in student_ids if str(student_id).strip()]
+        if not selected:
+            raise DomainError("请至少选择一名寝室成员", code="dorm_member_required")
+        invalid = [student_id for student_id in selected if student_id not in member_set]
+        if invalid:
+            raise DomainError(
+                "只能选择该寝室的当前成员：" + "、".join(invalid[:10]),
+                code="dorm_member_invalid",
+            )
+    existing = {
+        (row["student_id"], row["date"], row["reason"])
+        for row in conn.execute(
+            "SELECT student_id, date, reason FROM discipline WHERE type = '寝室违纪' AND room = ?",
+            (room,),
+        ).fetchall()
+    }
+    added = 0
+    for student_id in dict.fromkeys(selected):
+        if (student_id, date, reason.strip()) in existing:
+            continue
         conn.execute(
             "INSERT INTO discipline (id, student_id, date, type, reason, room, created_at)"
             " VALUES (?, ?, ?, ?, ?, ?, ?)",
             (uuid.uuid4().hex, student_id, date, "寝室违纪", reason.strip(), room, _now()),
         )
-    return len(members)
+        added += 1
+    return added
 
 
 def delete_dorm_discipline(conn: sqlite3.Connection, room: str, date: str, reason: str = "") -> int:

@@ -181,8 +181,8 @@ export class Store {
     return this.mutate(() => api.deleteDiscipline(studentId, recordId));
   }
 
-  addDormDiscipline(room: string, date: string, reason = ''): Promise<AppState> {
-    return this.mutate(() => api.addDormDiscipline(room, date, reason));
+  addDormDiscipline(room: string, date: string, reason = '', studentIds?: string[]): Promise<AppState> {
+    return this.mutate(() => api.addDormDiscipline(room, date, reason, studentIds));
   }
 
   deleteDormDiscipline(room: string, date: string, reason = ''): Promise<AppState> {

@@ -207,7 +207,7 @@ export function openDormEditor(store: Store, room: string | null): void {
       '<div class="field"><label>寝室成员</label>' +
       '<input id="dormEditSearch" class="search" placeholder="搜索姓名或学号…" aria-label="搜索学生">' +
       `<div id="dormEditMembers" class="dorm-picker">${memberRows || '<div class="hint" style="padding:10px">还没有学生名单</div>'}</div></div>` +
-      '<div class="field" style="margin-top:16px"><label>寝室违纪记录（一次事件一行；删掉的行保存后即撤销）</label>' +
+      '<div class="field" style="margin-top:16px"><label>寝室违纪记录（一次事件一行，默认整间；只登记个别成员请用列表里的“＋记一次”）</label>' +
       `<div id="dormEditIncidents">${dormIncidentDrafts(current).map(dormIncidentRow).join('')}</div>` +
       '<button class="small" id="dormEditAddIncident" type="button" style="margin-top:8px">＋ 添加一次违纪</button></div>',
     `<button data-close>取消</button><button class="primary" id="dormEditSave">${editing ? '保存修改' : '添加寝室'}</button>`,
@@ -285,27 +285,59 @@ export function dormTabActive(): boolean {
 }
 
 
-/** 主动写入一次寝室违纪：整间每人各记一条，统计按一次事件。 */
+/** 主动写入一次寝室违纪：默认全选当前成员，也可以只勾选个别同学。 */
 export function openDormDisciplineModal(store: Store, room: string): void {
+  const members = (store.state?.students ?? []).filter((student) => (student.dorm ?? '').trim() === room);
+  if (!members.length) {
+    toast(`寝室 ${room} 还没有登记成员`);
+    return;
+  }
+  const memberChoices = members
+    .map(
+      (student) =>
+        `<label class="dorm-member-option current"><input type="checkbox" value="${esc(student.id)}" checked>` +
+        `<span class="dorm-member-name">${esc(student.name)}</span>` +
+        `<span class="dorm-member-room">${esc(student.id)}</span></label>`,
+    )
+    .join('');
   openModal(
     `登记寝室违纪 · ${room}`,
-    `<p>这次违纪会记到 <b>${esc(room)}</b> 的每一名成员名下，统计时整间算作 <b>1 次</b>。</p>` +
+    `<p>选择这次违纪实际涉及的同学。统计时同一寝室、同一天、同一备注算作 <b>1 次</b>；默认全选。</p>` +
       `<div class="form-row"><div class="field"><label for="dormDiscDate">违纪日期（必填）</label><input id="dormDiscDate" type="date" value="${todayISO()}"></div></div>` +
-      '<div class="field"><label for="dormDiscReason">备注（选填）</label><input id="dormDiscReason" maxlength="200" placeholder="例如：熄灯后讲话"></div>',
+      '<div class="field"><label for="dormDiscReason">备注（选填）</label><input id="dormDiscReason" maxlength="200" placeholder="例如：熄灯后讲话"></div>' +
+      '<div class="field"><label>涉及学生（可只选个别成员）</label>' +
+      '<div class="dorm-picker" id="dormDiscMembers">' +
+      memberChoices +
+      '</div><div class="actions" style="margin-top:8px"><button class="small" type="button" id="dormDiscAll">全选</button>' +
+      '<button class="small" type="button" id="dormDiscNone">全不选</button></div></div>',
     '<button data-close>取消</button><button class="primary" id="dormDiscSave">保存</button>',
   );
+  const boxes = (): HTMLInputElement[] => $all<HTMLInputElement>('#dormDiscMembers input[type="checkbox"]');
+  $('#dormDiscAll')?.addEventListener('click', () => {
+    for (const box of boxes()) box.checked = true;
+  });
+  $('#dormDiscNone')?.addEventListener('click', () => {
+    for (const box of boxes()) box.checked = false;
+  });
   $('#dormDiscSave')?.addEventListener('click', () => {
     const date = ($('#dormDiscDate') as HTMLInputElement | null)?.value ?? '';
     const reason = ($('#dormDiscReason') as HTMLInputElement | null)?.value.trim() ?? '';
+    const studentIds = boxes()
+      .filter((box) => box.checked)
+      .map((box) => box.value);
     if (!date) {
       toast('请选择违纪日期');
       return;
     }
+    if (!studentIds.length) {
+      toast('请至少选择一名学生');
+      return;
+    }
     void store
-      .addDormDiscipline(room, date, reason)
+      .addDormDiscipline(room, date, reason, studentIds)
       .then(() => {
         closeModal();
-        toast(`已登记 ${room} 的寝室违纪`);
+        toast(`已登记 ${room} 的寝室违纪（${studentIds.length} 人）`);
       })
       .catch((error: Error) => toast(error.message));
   });

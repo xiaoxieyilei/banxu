@@ -157,8 +157,11 @@ export const api = {
       method: 'DELETE',
     }),
 
-  addDormDiscipline: (room: string, date: string, reason = ''): Promise<AppState> =>
-    request('/discipline/dorm', { method: 'POST', body: JSON.stringify({ room, date, reason }) }),
+  addDormDiscipline: (room: string, date: string, reason = '', studentIds?: string[]): Promise<AppState> =>
+    request('/discipline/dorm', {
+      method: 'POST',
+      body: JSON.stringify({ room, date, reason, studentIds }),
+    }),
 
   deleteDormDiscipline: (room: string, date: string, reason = ''): Promise<AppState> =>
     request('/discipline/dorm', { method: 'DELETE', body: JSON.stringify({ room, date, reason }) }),

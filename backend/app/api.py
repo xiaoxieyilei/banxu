@@ -334,7 +334,7 @@ def add_discipline(
 @router.post("/discipline/dorm", response_model=AppState)
 def add_dorm_discipline(payload: DormDisciplineRequest, conn: sqlite3.Connection = Depends(db_session)) -> dict:
     with write_tx(conn):
-        repository.add_dorm_discipline(conn, payload.room, payload.date, payload.reason)
+        repository.add_dorm_discipline(conn, payload.room, payload.date, payload.reason, payload.student_ids)
     return state_of(conn)
 
 

@@ -185,6 +185,8 @@ class DormDisciplineRequest(CamelModel):
     room: str
     date: str
     reason: str = ""
+    # 只登记寝室中的部分成员；省略/为空时兼容旧客户端，默认整间
+    student_ids: Optional[List[str]] = None
 
 
 class DisciplineImportRow(CamelModel):

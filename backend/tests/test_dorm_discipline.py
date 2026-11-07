@@ -56,3 +56,43 @@ def test_add_dorm_discipline_requires_members(client, seeded):
 def test_dorm_discipline_validates_date(client, seeded):
     _seed_rooms(client)
     assert client.post("/api/discipline/dorm", json={"room": "A301", "date": "2026-02-30"}).status_code == 400
+
+
+def test_add_dorm_discipline_can_select_members(client, seeded):
+    _seed_rooms(client)
+    state = client.post(
+        "/api/discipline/dorm",
+        json={
+            "room": "A301",
+            "date": "2026-10-13",
+            "reason": "熄灯后讲话",
+            "studentIds": ["002"],
+        },
+    ).json()
+    assert state["discipline"].get("001") is None
+    assert len(state["discipline"]["002"]) == 1
+    assert state["discipline"]["002"][0]["type"] == "寝室违纪"
+
+
+def test_add_dorm_discipline_rejects_non_member_or_empty(client, seeded):
+    _seed_rooms(client)
+    empty = client.post(
+        "/api/discipline/dorm",
+        json={"room": "A301", "date": "2026-10-13", "studentIds": []},
+    )
+    assert empty.status_code == 400
+    assert empty.json()["code"] == "dorm_member_required"
+    invalid = client.post(
+        "/api/discipline/dorm",
+        json={"room": "A301", "date": "2026-10-13", "studentIds": ["003"]},
+    )
+    assert invalid.status_code == 400
+    assert invalid.json()["code"] == "dorm_member_invalid"
+
+
+def test_add_dorm_discipline_is_idempotent_for_same_event(client, seeded):
+    _seed_rooms(client)
+    payload = {"room": "A301", "date": "2026-10-13", "reason": "讲话", "studentIds": ["001"]}
+    client.post("/api/discipline/dorm", json=payload)
+    state = client.post("/api/discipline/dorm", json=payload).json()
+    assert len(state["discipline"]["001"]) == 1

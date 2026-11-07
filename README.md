@@ -33,7 +33,7 @@
 | Linux | `~/.local/share/班序` | `~/Documents/班序备份（安装版）` |
 
 - Windows/Linux 包是 **v2.2.2 实验包**，内含 Python 运行时和前端，不需要安装环境；如启动失败，请把数据目录里的 `server.log` 发到 [Issue #1](https://github.com/xiaoxieyilei/banxu/issues/1)。
-- macOS Intel 安装包、签名公证、安装包自动更新分别跟踪在 Issue #2、#3。
+- macOS Intel 安装包与签名公证跟踪在 Issue #2；安装包版自动更新已在 v2.2.2 支持。
 - 安装包版和源码版是**独立数据目录**；迁移时先在源码版「导出备份」，再在安装包版「恢复备份」。
 
 > **v2.2.2 起，安装包版支持软件内直接升级**：点「检查更新 → 立即更新」，应用会自动下载新包、替换自身并重启，数据目录不变，不需要重新下载或迁移。旧安装包需要先手动装一次 v2.2.2，之后才能使用这个能力。
@@ -148,7 +148,7 @@ docs/                     使用说明、手机访问等
 ## 开发与测试
 
 ```bash
-# 后端（142 项）
+# 后端（143 项）
 cd backend && .venv/bin/python -m pytest -q && cd ..
 
 # 前端（91 项，需先构建）
@@ -199,7 +199,7 @@ gh release create v2.2.2 --generate-notes
 - [Issue #9](https://github.com/xiaoxieyilei/banxu/issues/9)：持续更新的 TODO；
 - #1 Windows/Linux 真实机器验证；
 - #2 macOS Intel/universal 与签名公证；
-- #3 安装包版自动更新；
+- #3 安装包版自动更新（v2.2.2 已支持，待跨平台验证）；
 - #4 历史满分回填与科目别名；
 - #5 成绩/班次编辑与重导入合并；
 - #6 登录限流与备份保留/加密；

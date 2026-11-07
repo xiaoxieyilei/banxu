@@ -64,3 +64,40 @@ def test_apply_rejects_old_or_busy_version(client, monkeypatch):
     response = client.post("/api/update/apply", json={"tag": "v2.2.0"})
     assert response.status_code == 409
     assert response.json()["code"] == "update_busy"
+
+
+def test_packaged_update_requires_platform_asset(client, monkeypatch):
+    monkeypatch.setenv("BANXU_PACKAGED", "1")
+    monkeypatch.setattr(updater, "repo_slug", lambda: "owner/repo")
+    monkeypatch.setattr(updater, "current_version", lambda: "2.2.1")
+    monkeypatch.setattr(updater.packaged_update, "asset_name", lambda: "banxu-macOS-arm64.zip")
+    base = {
+        "tag": "v2.2.2",
+        "url": "https://github.com/owner/repo/releases/tag/v2.2.2",
+        "notes": "",
+        "publishedAt": "",
+        "zipball": "https://api.github.com/x.zip",
+        "kind": "release",
+    }
+    monkeypatch.setattr(updater, "fetch_latest", lambda repo: {**base, "assets": []})
+    updater._check_cache = {"at": 0.0, "data": None}
+    body = client.get("/api/update/check?force=true").json()
+    assert body["packaged"] is True
+    assert body["available"] is True
+    assert body["applySupported"] is False
+
+    monkeypatch.setattr(
+        updater,
+        "fetch_latest",
+        lambda repo: {
+            **base,
+            "assets": [
+                {"name": "banxu-macOS-arm64.zip", "browser_download_url": "https://github.com/x.zip"},
+                {"name": "banxu-windows-x64.zip", "browser_download_url": "https://github.com/y.zip"},
+            ],
+        },
+    )
+    updater._check_cache = {"at": 0.0, "data": None}
+    body = client.get("/api/update/check?force=true").json()
+    assert body["applySupported"] is True
+    assert body["assetName"] == "banxu-macOS-arm64.zip"

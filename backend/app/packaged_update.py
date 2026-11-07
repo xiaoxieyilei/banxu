@@ -55,6 +55,9 @@ def allowed_url(url: str) -> bool:
 
 
 def app_path() -> Path:
+    configured = os.environ.get("BANXU_PACKAGED_APP_ROOT", "").strip()
+    if configured:
+        return Path(configured).resolve()
     executable = Path(sys.executable).resolve()
     if sys.platform == "darwin":
         for parent in executable.parents:
@@ -159,13 +162,21 @@ try {
     Remove-Item -LiteralPath $env:BANXU_EXTRACT_DIR -Recurse -Force -ErrorAction SilentlyContinue
     Write-State "done" "更新完成，正在重启"
     $env:BANXU_NO_BROWSER = "1"
-    Start-Process -FilePath (Join-Path $old "banxu.exe")
+    if ($env:BANXU_LAUNCH_KIND -eq "exe") {
+        Start-Process -FilePath (Join-Path $old "banxu.exe")
+    } else {
+        Start-Process -FilePath (Join-Path $old "runtime\pythonw.exe") -ArgumentList "launcher.py" -WorkingDirectory $old
+    }
 } catch {
     Write-State "error" ("自动更新失败：" + $_.Exception.Message)
     if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $old)) {
         Rename-Item -LiteralPath $backup -NewName (Split-Path -Leaf $old)
     }
-    Start-Process -FilePath (Join-Path $old "banxu.exe")
+    if ($env:BANXU_LAUNCH_KIND -eq "exe") {
+        Start-Process -FilePath (Join-Path $old "banxu.exe")
+    } else {
+        Start-Process -FilePath (Join-Path $old "runtime\pythonw.exe") -ArgumentList "launcher.py" -WorkingDirectory $old
+    }
 }
 ''', encoding="utf-8")
         return helper
@@ -188,8 +199,10 @@ write_state() {
 launch_old() {
     if [ "$(uname -s)" = "Darwin" ]; then
         /usr/bin/open "$OLD" >/dev/null 2>&1 || true
-    else
+    elif [ "$BANXU_LAUNCH_KIND" = "exe" ]; then
         nohup "$OLD/banxu" >/dev/null 2>&1 &
+    else
+        nohup /bin/sh "$OLD/启动班序.sh" >/dev/null 2>&1 &
     fi
 }
 while kill -0 "$BANXU_OLD_PID" 2>/dev/null; do sleep 0.5; done
@@ -250,6 +263,9 @@ def apply(updater, tag: str, host: str, port: int) -> dict:
     if not old.exists():
         raise DomainError("找不到当前应用目录，无法自动替换", status=500, code="update_app_missing")
 
+    launch_kind = "app" if sys.platform == "darwin" else (
+        "exe" if (old / ("banxu.exe" if os.name == "nt" else "banxu")).exists() else "script"
+    )
     helper = write_helper(updater, info["tag"], current, old, candidate, extract_dir)
     updater._write_status(phase="restarting", tag=info["tag"], current=current, message="正在替换应用并重启…")
     log = updater.UPDATE_LOG.open("ab")
@@ -262,6 +278,7 @@ def apply(updater, tag: str, host: str, port: int) -> dict:
         "BANXU_TAG": info["tag"],
         "BANXU_CURRENT": current,
         "BANXU_OLD_PID": str(os.getpid()),
+        "BANXU_LAUNCH_KIND": launch_kind,
     }
     command = (
         ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(helper)]

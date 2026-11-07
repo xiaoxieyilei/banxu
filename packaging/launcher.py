@@ -47,6 +47,11 @@ def main() -> int:
     except OSError:
         pass
 
+    if not getattr(sys, "frozen", False):
+        # 手工/嵌入式运行时包：应用根目录就是 launcher.py 所在目录
+        root = Path(__file__).resolve().parent
+        os.environ.setdefault("BANXU_APP_ROOT", str(root))
+        os.environ.setdefault("BANXU_PACKAGED_APP_ROOT", str(root))
     os.environ.setdefault("BANXU_DB", str(location / "banxu.sqlite3"))
     os.environ.setdefault("BANXU_PASSWORD_FILE", str(location / ".password"))
     os.environ.setdefault("BANXU_DATA_DIR", str(location))

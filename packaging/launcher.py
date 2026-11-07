@@ -31,12 +31,23 @@ def port_free(port: int) -> bool:
             return False
 
 
-def running(url: str) -> bool:
+def app_version() -> str:
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    try:
+        return (base / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def health(url: str) -> dict:
     try:
         with urllib.request.urlopen(url + "/api/health", timeout=1) as response:
-            return response.status == 200
+            if response.status != 200:
+                return {}
+            import json
+            return json.loads(response.read().decode("utf-8"))
     except Exception:
-        return False
+        return {}
 
 
 def main() -> int:
@@ -64,10 +75,14 @@ def main() -> int:
     sys.stdout = log
     sys.stderr = log
 
-    if running("http://127.0.0.1:8000"):
+    version = app_version()
+    existing = health("http://127.0.0.1:8000")
+    if existing and existing.get("version") == version:
         webbrowser.open("http://127.0.0.1:8000")
         return 0
-
+    if existing:
+        # 8000 被旧版服务占用时，不能直接打开旧版页面；在新的端口启动当前版本
+        print("端口 8000 上运行的是旧版本 %s，当前启动版本 %s" % (existing.get("version"), version))
     port = next((candidate for candidate in range(8000, 8020) if port_free(candidate)), 8000)
     url = "http://127.0.0.1:%d" % port
     if os.environ.get("BANXU_NO_BROWSER") != "1":

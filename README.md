@@ -1,44 +1,44 @@
 # 班序 · 班级管理
 
-给班主任用的本地班级管理工具：**Excel / PDF 导入名单与成绩、拖拽排座、按成绩点名、违纪记录与统计**。
+给班主任用的本地班级管理工具：**名单 / 成绩 / 座位 / 违纪 / 寝室 / 备份**，数据保存在本机，支持手机浏览器访问。
+
+**版本 2.2.1** · [MIT](LICENSE) · macOS / Windows / Linux
 
 - 项目主页：<https://github.com/xiaoxieyilei/banxu>
 - **详细使用说明：[docs/使用说明.md](docs/使用说明.md)**
-- 开源协议：[MIT](LICENSE)
-- 路线图 / TODO：[Issue #9](https://github.com/xiaoxieyilei/banxu/issues/9)（Windows/Linux 安装包、签名公证、成绩编辑、CI 等）
+- 最新安装包：<https://github.com/xiaoxieyilei/banxu/releases>
+- 路线图 / TODO：[Issue #9](https://github.com/xiaoxieyilei/banxu/issues/9)
 
-本目录是「固化为正式项目」后的版本：
+## 下载安装（推荐，无需 Python/Node）
 
-| 部分 | 技术栈 | 目录 |
+| 平台 | Release 资产 | 状态 |
 |---|---|---|
-| 前端 | TypeScript（浏览器原生 ES Module） | `frontend/` |
-| 后端 | Python 3.9+ / FastAPI / SQLite | `backend/` |
-| 旧版单文件 | 早期零依赖单文件（保留作参考与应急） | `app/`、`dist/` |
+| macOS Apple Silicon | `banxu-macOS-arm64.zip` | ✅ 已在本机实测 |
+| Windows 10/11 x64 | `banxu-windows-x64.zip` | 🧪 内置运行时，尚未真机验证 |
+| Linux x64 | `banxu-linux-x64.tar.gz` | 🧪 内置运行时，尚未真机验证 |
 
-## 系统支持
+安装步骤：
 
-| 系统 | 启动方式 | 说明 |
+1. 打开 [Releases](https://github.com/xiaoxieyilei/banxu/releases)，下载对应资产；
+2. macOS 解压后把 `班序.app` 拖进「应用程序」；Windows 解压后双击 `启动班序.bat`；Linux 解压后运行 `./启动班序.sh`；
+3. macOS 首次打开若被 Gatekeeper 拦截，右键应用 → **打开**（当前未做 Apple 公证）；
+4. 浏览器会自动打开班序。如果没打开，手动访问 `http://127.0.0.1:8000`。
+
+**数据目录**
+
+| 平台 | 数据 | 备份 |
 |---|---|---|
-| macOS | 双击 `启动班序.command`，或 `./run.sh` | 支持 LaunchAgent 开机自启 |
-| Windows 10/11 | 双击 `启动班序.bat` | 需要 Python 3.9+ 与 Node.js 20+ |
-| Linux | `./run.sh` | 需要桌面环境/浏览器；无 LaunchAgent 脚本 |
+| macOS | `~/Library/Application Support/班序` | `~/Documents/班序备份（安装版）` |
+| Windows | `%APPDATA%\班序` | `文档\班序备份（安装版）` |
+| Linux | `~/.local/share/班序` | `~/Documents/班序备份（安装版）` |
 
-后端 FastAPI、SQLite、PDF 解析（PyMuPDF）和前端都是跨平台的；只有双击启动器和 macOS LaunchAgent 是系统专属的。自动更新在三个系统上都能工作。
+- Windows/Linux 包是 **v2.2.1 实验包**，内含 Python 运行时和前端，不需要安装环境；如启动失败，请把数据目录里的 `server.log` 发到 [Issue #1](https://github.com/xiaoxieyilei/banxu/issues/1)。
+- macOS Intel 安装包、签名公证、安装包自动更新分别跟踪在 Issue #2、#3。
+- 安装包版和源码版是**独立数据目录**；迁移时先在源码版「导出备份」，再在安装包版「恢复备份」。
 
-## 下载安装包（无需 Python/Node）
+## 从源码运行
 
-Release 提供独立安装包（内置 Python 运行时和前端，无需安装 Python/Node）：
-
-1. 打开 <https://github.com/xiaoxieyilei/banxu/releases>，下载最新资产：
-   - macOS Apple Silicon：`banxu-macOS-arm64.zip`，解压后把 `班序.app` 拖到「应用程序」；
-   - Windows 10/11：`banxu-windows-x64.zip`，解压后双击 `启动班序.bat`；
-   - Linux x64：`banxu-linux-x64.tar.gz`，解压后运行 `./启动班序.sh`；
-2. macOS 首次打开如果被 Gatekeeper 拦截，右键 `班序.app` → **打开**（未做 Apple 公证）；
-3. 数据目录：macOS `~/Library/Application Support/班序`，Windows `%APPDATA%\班序`，Linux `~/.local/share/班序`；备份在用户「文档/班序备份（安装版）」。
-
-> Windows/Linux 资产为 v2.2.0 实验包，当前环境无法真机验证；如启动失败请把 `server.log` 发到 Issue #1。macOS Intel 安装包仍在 Issue #2。
-
-## 快速开始
+适合开发或需要自行修改的场景。
 
 ```bash
 # 1. 后端依赖（首次）
@@ -48,107 +48,71 @@ backend/.venv/bin/pip install -r backend/requirements.txt
 # 2. 前端构建（首次或改动 src 后）
 cd frontend && npm install && npm run build && cd ..
 
-# 3. 启动（后端顺带托管前端产物，同一端口）
+# 3. 启动（后端同时托管前端产物）
 backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --port 8000
 # 打开 http://127.0.0.1:8000
 
-# 也可以直接 ./run.sh（自动装依赖 + 构建 + 启动；默认只监听 127.0.0.1，PORT 可覆盖端口）
+# 或者直接 ./run.sh（自动安装依赖、构建并启动）
 ```
 
-数据库默认在 `backend/data/banxu.sqlite3`（可用环境变量 `BANXU_DB` 指定）。
+要求 Python 3.9+、Node.js 20+。数据库默认在 `backend/data/banxu.sqlite3`，可用 `BANXU_DB` 指定。
 
-> 安全提醒：本项目是**本机单用户**工具，用访问口令保护。默认只监听 `127.0.0.1`；需要手机访问时用 `启动班序（手机访问）.command`（macOS）/ `启动班序（手机访问）.bat`（Windows），或 `BANXU_HOST=0.0.0.0 ./run.sh`，并只在可信 Wi-Fi / Tailscale 下使用。
+Windows 源码启动：双击 `启动班序.bat`；macOS：双击 `启动班序.command`。
 
-### 可选：开机自启（仅 macOS）
-
-先手动运行一次 `./run.sh` 完成依赖安装与前端构建，然后：
-
-```bash
-./scripts/install-launchagent.command          # 只监听 127.0.0.1
-ALLOW_PHONE=1 ./scripts/install-launchagent.command   # 允许手机访问（0.0.0.0）
-```
-
-日志在 `~/Library/Logs/banxu-server.log`；卸载用 `./scripts/uninstall-launchagent.command`。安装前需先停止当前正在运行的班序进程。
-
-## 从旧版备份迁移
-
-旧版单文件（localStorage 结构）的 JSON 备份可以用脚本导入新版：
-
-```bash
-# 先启动后端（./run.sh 或 uvicorn），再执行：
-backend/.venv/bin/python backend/scripts/import_legacy_backup.py 旧备份.json
-# 只想看会导入什么、不写入：
-backend/.venv/bin/python backend/scripts/import_legacy_backup.py 旧备份.json --dry-run
-```
-
-脚本把 `className/extraRow/showScores/examId/subject` 映射到新版 `settings`，补 `rows=7`、`callRange=single`，
-转换座位、考试（含校次/班次）与违纪记录；**会整库替换**当前数据，导入前建议先在软件里导出一次备份。
-
-旧版备份里通常**没有考试成绩**（导出时间早于成绩导入）。原始成绩表（学校网站下载的“班级全学科成绩简表”）
-可以用另一个脚本直接导入，自动识别两行表头与得分/校次/班次：
-
-```bash
-backend/.venv/bin/python backend/scripts/import_school_scores.py 成绩表.xlsx --select
-# --dry-run 只解析；--date/--name 可覆盖从文件名推断的日期与名称
-```
-
-注意：导入学校成绩表需要 `openpyxl`（`backend/.venv/bin/pip install openpyxl`）。
-
-支持的两种学校表格（软件里的「导入考试成绩」同样支持）：
-
-| 类型 | 表头 | 科目来源 |
-|---|---|---|
-| 全学科汇总/简表 | 两行：科目行 + `得分/校次/班次` 行 | 表头科目行 |
-| 单科成绩表（如“语文限时练/英语周练”） | 首行标题，第 2 行单行表头 `序号/准考证号/姓名/得分/校次/班次` | 文件名里的 `(语文)`、`(英语)` 或工作表名 |
-
-两种都按**姓名**匹配学生（准考证号与软件学号不同，仅作干扰列忽略）；单科表不会额外生成“总分”列。
-导入后即可在「随机点名」里按该科目自动分档（优秀 30% / 中等 40% / 后进 30%）。
-
-## 功能
+## 主要功能
 
 - **名单**：Excel 导入（按学号合并：更新已有、追加新学生、不删未列出的人），手动增删改，导出。
-- **成绩**：支持班序模板、学校网站“班级全学科成绩汇总”表（两行表头、得分/校次/班次），以及学校「学生成绩单」**PDF**（按姓名匹配，单科只导入总分；逐题得分暂不保存）。缺少班次的成绩会按本班分数**自动计算班次**，校次留空；PDF 科目与满分自动带入，也可手动修改；同名同日期的考试可勾选「覆盖同名同日期考试」直接替换该场成绩。考试名称与考试时间必填，按时间倒序。
-- **左侧菜单「考试成绩」为可展开分组**（点开下拉出两个视图）：
-  - **单次考试成绩**：考试档案用一个下拉框选择考试，下方显示该场明细表；**总分列在最前**、各科按学科顺序，每格显示「分数／校次／班次」，可点表头排序、可搜索。
-  - **学科成绩总表**：按学科把全学期各次考试横向排开。
-    大字为分数，**绿/红小字为校次变化、蓝/橙小字为班次变化**（↑ 前进 / ↓ 后退），末列汇总最新分数、均分、最新校次与进退步；点任意一行打开该生趋势气泡。
-- **个人详情气泡（跟随座位）**：点座位上的学生后，**违纪气泡贴在座位左侧（红）、成绩气泡贴在右侧（绿）**，不遮挡也不压缩座位表，两类数据同屏可见；点其他学生直接切换，滚动/缩放会跟随座位；空间不足时自动换边或上下错开；**点击空白处、按 Esc 或“关闭”都会收起**；气泡为半透明毛玻璃，能透出下方座位。
-- **个人趋势图**：抽屉内绿色气泡展示**排名走势折线图**——同一张图里校次（实线，左轴）与班次（虚线，右轴）叠加对比，可按学科切换，名次越小越靠上、不显示分数；下方按考试分块列出**该场全部科目**的分数与校次/班次。
-- **座位**：8 列 × 6 或 7 排 + 中央加座 2 个（50 / 58 座）；拖动吸附、占座互换、点选后点座位移动、待安排区拖回；大组轮换（1→2→3→4→1，组内位置不变，中央加座不动）；勾选「显示成绩」后可选择**单次考试 / 最近 3、5 次平均 / 全部考试平均**，并选择**科目**（如数学），**姓名下方显示该口径的成绩与班级排名（班次，缺考不计分母）**；平均模式下若每场都填了该科满分，会按**百分制**折算后再平均；打印。
-- **点名**：优秀前 30% / 中间 40% / 后进生后 30%（并列同分同一档）；支持单次考试或最近 3/5 次、全部考试的平均分；本轮不重复。
-- **违纪**：8 类类型按钮（默认晚自习违纪）+ 日期 + 可选备注；单条删除、撤销上一条、恢复刚删除；备忘录文字批量导入（**同一天多次违纪各记一条，默认不合并**，可在导入窗口勾选“跳过已存在的相同记录”）；按学生汇总的违纪情况页（只列有记录的学生）。
-- **寝室违纪统计**：按寝室聚合「寝室违纪」事件（同寝室同一天同备注算 1 次），可整间或选择个别成员登记/撤销整次；支持「添加寝室」和逐间「编辑」（改寝室号、调成员、增删违纪事件）。违纪记录归属寝室号，学生调寝后事件仍留在原寝室并标注“已调出”，不会带走或误删其他寝室的记录。
-- **满分口径**：考试信息弹窗可为每科填写满分；PDF 导入自动带入；用于把不同满分的考试换算成可比的百分制。
-- **数据安全**：数据在本机 SQLite；支持导出/恢复 JSON 备份；顶部「↶ 撤销」或 ⌘Z 可全局撤销最近 30 步。
-- **自动更新**：源码启动版顶部「检查更新」可一键下载、重建、重启；安装包版会提示从 Releases 下载新安装包（避免破坏应用签名与运行时）。
-- **手机访问**：双击 `启动班序（手机访问）.command`（macOS）或 `.bat`（Windows）后监听 0.0.0.0 + 访问口令登录；手机经 Tailscale（或同一 Wi-Fi）打开 `http://<电脑IP>:8000`，可“添加到主屏幕”当 App 用，与电脑共用同一份数据。详见 `docs/手机访问与同步.md`。
-- **每日自动备份**：后端每天 **21:30** 检查一次，只有数据相对上一份备份有变化时，才把完整状态写入 `<用户文档目录>/班序备份/班序备份-YYYY-MM-DD.json`（目录自动创建，同一天覆盖）；当天没有改动就跳过，不生成重复备份。软件启动时还会补一次备份（数据没变则跳过），避免 21:30 时电脑没开机而漏备；备份完全由软件自身完成，不再由 DSH 定时任务代为调用；DSH 定时任务只做只读自检（21:45 报告备份状态）。页面右上角「备份到文件夹」可随时手动生成当天备份（手动导出总是落盘）。备份状态可查 `GET /api/backup/status`。
+- **成绩**：支持班序模板、学校全学科成绩表、学校「学生成绩单」PDF；缺少班次时按本班分数自动计算；PDF 自动带科目和满分，也可手动修改；支持覆盖同名同日期考试。
+- **成绩浏览**：
+  - 单次考试：下拉选择考试，总分在最前，各科显示「分数／校次／班次」，可排序、搜索；
+  - 学科总表：按学科横向展开，绿/红显示校次变化、蓝/橙显示班次变化；
+  - 个人趋势：点座位学生，左侧违纪气泡、右侧成绩气泡，含排名折线图。
+- **座位**：8 列 × 6/7 排 + 中央加座；拖拽吸附、互换、点选移动、大组轮换、打印；可显示单次考试、最近 3/5 次或全部考试平均，按科目显示成绩与班次；平均模式支持按满分折算百分制。
+- **点名**：优秀 30% / 中等 40% / 后进 30%，按单次或最近 3/5 次、全部考试平均分，本轮不重复。
+- **违纪**：8 类违纪 + 日期 + 备注；单条删除、撤销上一条、恢复刚删除；备忘录文字批量导入；按学生汇总。
+- **寝室违纪**：按寝室聚合事件（同寝室同一天同备注算 1 次）；可整间登记，也可在「＋ 记一次」中只勾选实际涉及的成员；学生调寝后历史事件仍归属原寝室并标注「已调出」。
+- **满分口径**：考试信息可填每科满分；PDF 自动带入；用于不同满分考试的百分制比较。
+- **数据安全**：本机 SQLite；导出/恢复 JSON 备份；顶部「↶ 撤销」或 ⌘Z 全局撤销最近 30 步。
+- **自动更新**：源码版顶部「检查更新」可下载、重建、重启；安装包版提示从 Releases 下载新安装包。
+- **手机访问**：`启动班序（手机访问）.command`（macOS）/ `.bat`（Windows）监听 `0.0.0.0`，手机经同一 Wi-Fi 或 Tailscale 打开 `http://<电脑IP>:8000`，使用访问口令登录。
+- **自动备份**：每天 21:30 检查一次，数据有变化才写入「文档/班序备份/班序备份-YYYY-MM-DD.json」；启动时补一次；页面右上角可手动备份。
 
-## 目录
+更多操作细节见 **[使用说明](docs/使用说明.md)**。
+
+## 数据备份与恢复
+
+- 页面顶部「备份到文件夹」：立即写入当天备份；
+- 「导出备份」：下载 JSON 文件；
+- 「恢复备份」：从 JSON 恢复整库；
+- 自动备份路径：`<用户文档>/班序备份/`（安装包版为 `班序备份（安装版）`）；
+- 备份状态：`GET /api/backup/status`。
+
+安全提醒：本项目是**本机单用户**工具，用访问口令保护。默认只监听 `127.0.0.1`；手机访问只在可信 Wi-Fi / Tailscale 下使用。备份包含学生成绩，请不要上传到公开位置。
+
+## 项目结构
 
 ```
 frontend/
-  index.html              页面骨架（单一 HTML，无框架）
-  src/main.ts             入口：页面切换、事件绑定
+  index.html              页面骨架
+  src/main.ts             入口、页面切换、事件绑定
   src/api.ts              类型化 API 客户端
-  src/store.ts            状态仓库（服务端为唯一事实来源 + 撤销快照）
-  src/types.ts            与后端 camelCase 契约一致的类型
-  src/lib/dates.ts        日期解析与考试排序
-  src/lib/seats.ts        座位布局、角标、大组轮换映射
-  src/lib/ranking.ts      科目过滤、平均分、分档、预览排序
-  src/lib/discipline.ts   违纪类型与备忘录文字解析
-  src/lib/excel.ts        Excel 解析（名单 / 成绩 / 学校汇总表）与模板
-  src/lib/pdf-exam.ts     PDF 成绩单的姓名匹配与单科成绩映射
-  src/ui/*.ts             各页面渲染与交互
-  tests/*.test.mjs        Node 内置 test runner（跑 dist 产物）
+  src/store.ts            状态仓库 + 撤销快照
+  src/lib/                日期、座位、排名、违纪、Excel、PDF
+  src/ui/                 各页面渲染
+  tests/                  Node test runner + 浏览器 E2E
 backend/
-  app/main.py             FastAPI 工厂、CORS、错误映射、静态托管
-  app/api.py              REST 路由（写操作单事务 + 统一返回完整状态）
-  app/repository.py       全部 SQL
+  app/main.py             FastAPI 工厂、静态托管
+  app/api.py              REST 路由
+  app/repository.py       SQL
   app/domain.py           业务规则与校验
-  app/schemas.py          pydantic v2 契约（camelCase 别名）
-  app/db.py               SQLite 连接、建表、事务
-  tests/                  pytest（TestClient）
+  app/schemas.py          pydantic v2 契约
+  app/db.py               SQLite 连接与迁移
+  tests/                  pytest
+packaging/
+  launcher.py             安装包启动入口
+  build-macos.sh          macOS .app 构建
+  build_binary.py         Windows/Linux PyInstaller 构建
+docs/                     使用说明、手机访问等
 ```
 
 ## API 速览
@@ -158,67 +122,95 @@ backend/
 | GET | `/api/state` | 完整状态（设置、学生、考试、座位、违纪） |
 | POST | `/api/roster/import` | 名单导入（按学号合并） |
 | POST/PATCH/DELETE | `/api/students[/{id}]` | 学生增改删 |
-| POST | `/api/exams/pdf-parse` | 解析学校成绩单 PDF（只返回预览数据，不写库） |
-| POST/PATCH/DELETE | `/api/exams[/{id}]` | 考试导入 / 改名称与时间 / 删除 |
+| POST | `/api/exams/pdf-parse` | 解析成绩单 PDF（只预览，不写库） |
+| POST/PATCH/DELETE | `/api/exams[/{id}]` | 考试导入 / 修改 / 删除 |
 | PUT | `/api/seats` | 整表覆盖座位 |
-| POST | `/api/seats/move` | 移动或互换（`target: null` 回到待安排） |
+| POST | `/api/seats/move` | 移动或互换 |
 | POST | `/api/seats/rotate` | 大组轮换 |
-| DELETE | `/api/seats` | 清空座位 |
-| POST | `/api/discipline` | 添加违纪（类型受服务端枚举校验） |
+| POST | `/api/discipline` | 添加违纪 |
+| POST | `/api/discipline/dorm` | 登记寝室违纪（可选 `studentIds` 只登记部分成员） |
+| DELETE | `/api/discipline/dorm` | 撤销整次寝室违纪 |
 | DELETE | `/api/discipline/{studentId}/{recordId}` | 删除单条 |
-| POST | `/api/discipline/import` | 批量导入（自动跳过重复） |
-| GET | `/api/discipline/summary?days=` | 按学生汇总（只返回有记录的学生） |
-| PATCH | `/api/settings` | 班级名、排数、中央加座、显示成绩、点名口径等 |
-| POST | `/api/dorms/import` | 批量登记寝室（寝室号 + 学生） |
-| POST | `/api/dorms/save` | 新增/编辑整间寝室（改名、成员、寝室违纪事件一次提交） |
-| GET/POST | `/api/backup` | 导出备份 / 恢复备份（也用于撤销） |
-| GET | `/api/update/check` | 检查 GitHub 更新（可加 `?force=true`） |
+| POST | `/api/discipline/import` | 批量导入 |
+| GET | `/api/discipline/summary?days=` | 按学生汇总 |
+| PATCH | `/api/settings` | 班级名、排数、显示成绩等 |
+| POST | `/api/dorms/import` | 批量登记寝室 |
+| POST | `/api/dorms/save` | 新增/编辑整间寝室 |
+| GET/POST | `/api/backup` | 导出 / 恢复备份 |
+| GET | `/api/update/check` | 检查 GitHub 更新 |
 | GET | `/api/update/status` | 更新进度 |
-| POST | `/api/update/apply` | 下载并应用指定版本 |
+| POST | `/api/update/apply` | 应用更新（仅源码版） |
 
 交互式文档：`http://127.0.0.1:8000/api/docs`。
 
-## 测试
+## 开发与测试
 
 ```bash
 # 后端（142 项）
 cd backend && .venv/bin/python -m pytest -q && cd ..
 
-# 前端（91 项，需先 npm run build）
+# 前端（91 项，需先构建）
 cd frontend && npm run build && npm test && cd ..
 
 # 浏览器 E2E（真实 Chrome + 临时后端，不接触用户数据）
 cd frontend && npm run test:e2e && cd ..
 ```
 
-## 构建 macOS 安装包
+## 构建安装包
 
 ```bash
+# macOS .app（需要先运行过 ./run.sh）
 ./packaging/build-macos.sh
-# 产物：packaging/dist/班序.app 与 packaging/dist/banxu-macOS-arm64.zip
+# 产物：packaging/dist/班序.app、packaging/dist/banxu-macOS-arm64.zip
+
+# Windows/Linux（在对应系统运行；需要 PyInstaller）
+python packaging/build_binary.py
+# Windows：packaging/dist/banxu-windows-x64.zip
+# Linux：  packaging/dist/banxu-linux-x64.tar.gz
 ```
 
-需要本机已运行过一次 `./run.sh`（有 `backend/.venv` 和 `frontend/dist`）。
+自动构建 Windows/Linux/macOS 的 GitHub Actions workflow 已准备好，但当前仓库 token 缺少 `workflow` 权限，尚未启用；对应 Issue #8。
 
 ## 发布新版本
 
-1. 修改根目录 `VERSION`（例如 `2.2.0`）并提交；
-2. 推送后打标签并创建 GitHub Release：
+1. 修改根目录 `VERSION`；
+2. 提交并推送；
+3. 打标签并创建 Release：
 
 ```bash
-git tag v2.2.0
+git tag v2.2.1
 git push origin main --tags
-gh release create v2.2.0 --generate-notes
+gh release create v2.2.1 --generate-notes
 ```
 
-3. 把 `packaging/dist/banxu-macOS-arm64.zip` 上传到 Release；
-4. 源码版朋友点「检查更新 → 更新到 v2.2.0」即可自动更新；安装包版按提示下载新安装包覆盖。
+4. 上传安装包资产：
+   - `packaging/dist/banxu-macOS-arm64.zip`
+   - `packaging/dist/banxu-windows-x64.zip`
+   - `packaging/dist/banxu-linux-x64.tar.gz`
+   - 对应 `.sha256`；
+5. 源码版用户点「检查更新」即可升级；安装包版用户到 Releases 下载新包。
 
-更新仓库配置在项目根目录 `update.json`；只允许从该仓库的 Release/Tag 下载，避免任意地址更新。
+更新仓库配置在 `update.json`，只允许从该仓库的 Release/Tag 下载。
+
+## 路线图
+
+- [Issue #9](https://github.com/xiaoxieyilei/banxu/issues/9)：持续更新的 TODO；
+- #1 Windows/Linux 真实机器验证；
+- #2 macOS Intel/universal 与签名公证；
+- #3 安装包版自动更新；
+- #4 历史满分回填与科目别名；
+- #5 成绩/班次编辑与重导入合并；
+- #6 登录限流与备份保留/加密；
+- #7 批量 PDF 导入与考试搜索；
+- #8 GitHub Actions 测试与发布流水线。
 
 ## 设计取舍
 
-- **单用户本机应用**：访问口令登录，不做多租户；SQLite 用 `BEGIN IMMEDIATE` 串行化写入。多设备请靠备份文件迁移。
-- **写操作返回完整状态**：每次变更后前端整体替换状态，避免局部同步 bug；数据量小，开销可忽略。
-- **撤销在前端**：保留最近 30 份快照，撤销即调用 `/api/backup` 还原。
-- **不使用前端框架**：静态骨架 + 模板字符串渲染，TypeScript 负责类型安全，`tsc` 同时完成编译与类型检查。
+- **单用户本机应用**：访问口令登录，不做多租户；SQLite 用 `BEGIN IMMEDIATE` 串行化写入。多设备请通过备份迁移。
+- **写操作返回完整状态**：每次变更整体替换前端状态，避免局部同步 bug；数据量小，开销可忽略。
+- **撤销在前端**：保留最近 30 份快照，撤销时调用 `/api/backup` 还原。
+- **不使用前端框架**：静态骨架 + 模板字符串渲染，TypeScript 负责类型与编译。
+
+## 许可证
+
+[MIT](LICENSE)。欢迎提交 Issue / PR；使用中遇到问题请附上系统、安装方式和 `server.log`。

@@ -157,6 +157,21 @@ try {
   assert.equal(options, 2, '考试档案下拉应包含两场考试');
   await page.selectOption('#examArchiveSelect', { index: 1 });
   await page.waitForFunction(() => document.querySelector('#examPreviewPanel')?.textContent?.includes('数学限时 B'));
+  const previewText = await page.locator('#examPreviewPanel').innerText();
+  assert.ok(previewText.includes('历次加权平均'), '单次成绩表应显示历次加权平均列');
+  const firstStudent = await page.locator('#examPreviewPanel tr').filter({ hasText: '001' }).first().innerText();
+  assert.ok(firstStudent.includes('70'), '001 的历次加权平均应为 (96/120 + 72/120)/2 = 70');
+
+  await page.evaluate(() => document.querySelector('[data-page="seat"]')?.click());
+  await page.waitForSelector('#seating [data-student="001"]');
+  await page.click('#seating [data-student="001"]');
+  await page.waitForSelector('#bubbleDetailSubject');
+  assert.equal(await page.locator('#bubbleDetailSubject option').count(), 2, '逐场明细应有“全部科目 + 数学”');
+  await page.selectOption('#bubbleDetailSubject', { label: '数学' });
+  await page.waitForFunction(() => document.querySelectorAll('#scoreHistory .exam-block').length === 2);
+  const detailText = await page.locator('#scoreHistory').innerText();
+  assert.ok(detailText.includes('逐场成绩明细'), '逐场明细应保留标题');
+  assert.ok(detailText.includes('数学'), '筛选后应显示数学明细');
 
   assert.deepEqual(pageErrors, [], '页面不应有运行时错误');
   console.log('E2E 通过：登录、座位百分制平均、单场考试、考试档案下拉');

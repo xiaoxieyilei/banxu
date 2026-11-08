@@ -73,10 +73,15 @@
 .rank-hit{cursor:pointer;pointer-events:all}
 .detail-filter-row{display:flex;align-items:center;gap:8px;margin:8px 0 4px;font-size:11px;opacity:.92}
 .detail-filter-row label{font-size:11px;margin:0;opacity:.85}
-.rank-tooltip{position:fixed;z-index:1400;pointer-events:none;background:#fff;color:#1d3b31;border-radius:9px;padding:9px 11px;box-shadow:0 10px 26px #0e2a2033;font-size:12px;line-height:1.55;min-width:150px}
+.trend-chart.dual{cursor:crosshair}
+.rank-tooltip{position:fixed;z-index:1400;pointer-events:none;background:#fff;color:#1d3b31;border-radius:9px;padding:10px 12px;box-shadow:0 12px 30px #0e2a203d;font-size:12px;line-height:1.5;min-width:260px;max-width:340px}
 .rank-tooltip[hidden]{display:none}
 .rank-tooltip b{font-size:13px}
 .rank-tooltip-date{color:#6b8078;margin-bottom:3px}
+.rank-tooltip-total{font-weight:600;margin:5px 0 6px;color:#1d5b48}
+.rank-tooltip-subjects{border-top:1px solid #dce9e1;padding-top:5px;margin-top:3px}
+.rank-tooltip-row{display:grid;grid-template-columns:52px 62px 1fr;gap:5px;font-size:11px;padding:1px 0}
+.rank-tooltip-row span:first-child{font-weight:600}
 .exam-block{background:#ffffff1a;border-radius:9px;padding:8px 9px;margin-bottom:8px}
 .exam-block-head{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:11px;margin-bottom:2px}
 .exam-block-head b{font-size:12px}

@@ -6,6 +6,7 @@ import { $, $all, esc, closeModal, openModal, setHTML, setText, toast } from './
 import { ui } from './state.js';
 import { seatLabel, seatsOfStudent } from '../lib/seats.js';
 import { dualRankSvg, rankSeries, studentSubjects, trendArrow } from '../lib/trend.js';
+import { examSubjects } from '../lib/ranking.js';
 
 function renderTypeChips(): void {
   setHTML(
@@ -88,7 +89,7 @@ export function renderBubbles(store: Store): void {
     ? `<div class="bubble-chart-wrap">` +
       `<div class="chart-title">${esc(chartSubject)} 排名走势（名次越小越靠上）</div>` +
       `<div class="rank-legend"><span class="legend-line school"></span>校次<span class="legend-line class"></span>班次</div>` +
-      `${dualRankSvg(schoolPoints, classPoints, { width: 330, height: 168 })}</div>`
+      `${dualRankSvg(schoolPoints, classPoints, { width: 330, height: 168, subject: chartSubject })}</div>`
     : '<div class="bubble-chart-wrap"><div class="chart-title">排名走势</div><div class="trend-empty">该科目暂无排名数据</div></div>';
 
   const movedSchool =
@@ -123,10 +124,13 @@ export function renderBubbles(store: Store): void {
     .map((exam) => {
       const values = exam.scores?.[studentId] ?? {};
       const ranks = exam.ranks?.[studentId] ?? {};
-      const rows = exam.subjects
-        .filter((subject) =>
-          detailSubject ? subject === detailSubject : subject === '总分' || values[subject] != null || ranks[subject],
-        )
+      const subjectsForExam = detailSubject
+        ? exam.subjects.includes(detailSubject) || values[detailSubject] != null || ranks[detailSubject]
+          ? [detailSubject]
+          : []
+        : exam.subjects;
+      const rows = subjectsForExam
+        .filter((subject) => detailSubject || subject === '总分' || values[subject] != null || ranks[subject])
         .sort((a, b) => (a === '总分' ? -1 : b === '总分' ? 1 : 0))
         .map((subject) => {
           const rank = ranks[subject];
@@ -157,15 +161,14 @@ export function renderBubbles(store: Store): void {
     '#scoreHistory',
     `<div class="chart-controls"><div class="subject-chips" id="scoreSubjects">${chartChips}</div>` +
       `<span class="chart-hint">虚线＝班次</span></div>` +
-      `<div class="detail-filter-row"><label for="bubbleDetailSubject">逐场明细科目</label>` +
+      `<div class="detail-filter-row"><label for="bubbleDetailSubject">逐场明细科目（点上方科目会同步筛选）</label>` +
       `<select id="bubbleDetailSubject" class="bubble-detail-select" aria-label="按科目筛选逐场明细">` +
       `<option value="">全部科目</option>` +
       subjects.map((subject) => `<option value="${esc(subject)}"${subject === detailSubject ? ' selected' : ''}>${esc(subject)}</option>`).join('') +
       `</select></div>` +
       summary +
       chart +
-      `<div id="rankTooltip" class="rank-tooltip" hidden></div>` +
-      `<div class="exam-list-title">逐场成绩明细（鼠标移到排名点上可看校次/班次）</div>` +
+      `<div class="exam-list-title">逐场成绩明细 · ${esc(detailSubject || '全部科目')}（鼠标悬停或点击图上任意位置可看该场详情）</div>` +
       (blocks || '<div class="bubble-empty">该科目暂无逐场成绩</div>'),
   );
   schedulePosition();
@@ -275,34 +278,75 @@ export function closeStudentBubbles(): void {
   ui.bubbleStudentId = null;
   document.body.classList.remove('bubbles-open');
   $('#studentBubbles')?.classList.remove('open');
+  hideRankTooltip();
 }
 
-function showRankTooltip(event: MouseEvent): void {
+function rankTooltipHtml(store: Store, examId: string, subject: string): string {
+  const exam = store.state?.exams.find((item) => item.id === examId);
+  const studentId = ui.bubbleStudentId;
+  if (!exam || !studentId) return '';
+  const scores = exam.scores?.[studentId] ?? {};
+  const ranks = exam.ranks?.[studentId] ?? {};
+  const rankText = (rank: { school?: number | null; class?: number | null } | undefined): string =>
+    `校次 ${rank?.school ?? '—'} / 班次 ${rank?.class ?? '—'}`;
+  let html = `<b>${esc(exam.name)}</b><div class="rank-tooltip-date">${esc(examDateLabel(exam))}</div>`;
+  if (subject === '总分') {
+    html += `<div class="rank-tooltip-total">总分 ${scores['总分'] ?? '—'} 分 · ${rankText(ranks['总分'])}</div>`;
+    const parts = examSubjects(exam).filter((item) => item !== '总分');
+    html += '<div class="rank-tooltip-subjects">';
+    for (const item of parts) {
+      html +=
+        `<div class="rank-tooltip-row"><span>${esc(item)}</span>` +
+        `<span>${scores[item] ?? '—'} 分</span><span>${rankText(ranks[item])}</span></div>`;
+    }
+    html += '</div>';
+  } else {
+    html += `<div class="rank-tooltip-total">${esc(subject)}：${scores[subject] ?? '—'} 分</div>`;
+    html += `<div class="rank-tooltip-row"><span>${esc(subject)}</span><span>${scores[subject] ?? '—'} 分</span><span>${rankText(ranks[subject])}</span></div>`;
+  }
+  return html;
+}
+
+function showRankTooltip(event: MouseEvent | PointerEvent, store: Store): void {
   const target = event.target as Element | null;
-  const hit = target?.closest?.('.rank-hit') as Element | null;
   const tip = $('#rankTooltip') as HTMLElement | null;
-  if (!hit || !tip) return;
-  const exam = hit.getAttribute('data-exam') ?? '考试';
-  const date = hit.getAttribute('data-date') ?? '';
-  const school = hit.getAttribute('data-school') ?? '';
-  const klass = hit.getAttribute('data-class') ?? '';
-  tip.innerHTML =
-    `<b>${esc(exam)}</b>` +
-    `<div class="rank-tooltip-date">${esc(date)}</div>` +
-    `<div>校次：${school ? `第 ${esc(school)} 名` : '—'}</div>` +
-    `<div>班次：${klass ? `第 ${esc(klass)} 名` : '—'}</div>`;
+  const chart = target?.closest?.('.trend-chart.dual') as Element | null;
+  if (!chart || !tip) {
+    if (tip) tip.hidden = true;
+    return;
+  }
+  const hits = [...chart.querySelectorAll('.rank-hit')];
+  let nearest: Element | null = null;
+  let distance = Infinity;
+  for (const hit of hits) {
+    const rect = hit.getBoundingClientRect();
+    const current = Math.abs(event.clientX - (rect.left + rect.width / 2));
+    if (current < distance) {
+      distance = current;
+      nearest = hit;
+    }
+  }
+  if (!nearest) {
+    tip.hidden = true;
+    return;
+  }
+  const examId = nearest.getAttribute('data-exam-id') ?? '';
+  const subject = nearest.getAttribute('data-subject') ?? '';
+  const key = `${examId}|${subject}|${ui.bubbleStudentId ?? ''}`;
+  if (tip.dataset.key !== key) {
+    tip.innerHTML = rankTooltipHtml(store, examId, subject);
+    tip.dataset.key = key;
+  }
   tip.hidden = false;
-  const width = tip.offsetWidth || 180;
-  const height = tip.offsetHeight || 70;
-  const left = Math.max(8, Math.min(event.clientX + 12, window.innerWidth - width - 8));
-  const top = Math.max(8, Math.min(event.clientY + 12, window.innerHeight - height - 8));
+  const width = tip.offsetWidth || 280;
+  const height = tip.offsetHeight || 120;
+  const left = Math.max(8, Math.min(event.clientX + 16, window.innerWidth - width - 8));
+  const top = Math.max(8, Math.min(event.clientY + 16, window.innerHeight - height - 8));
   tip.style.left = `${Math.round(left)}px`;
   tip.style.top = `${Math.round(top)}px`;
 }
 
-function hideRankTooltip(event: MouseEvent): void {
-  const target = event.target as Element | null;
-  if (!target?.closest?.('.rank-hit')) return;
+function hideRankTooltip(): void {
   const tip = $('#rankTooltip') as HTMLElement | null;
   if (tip) tip.hidden = true;
 }
@@ -408,6 +452,7 @@ export function setupBubbles(store: Store): void {
     const subjectButton = target.closest<HTMLElement>('[data-chart-subject]');
     if (subjectButton) {
       ui.bubbleSubject = subjectButton.dataset.chartSubject ?? '';
+      ui.bubbleDetailSubject = ui.bubbleSubject === '总分' ? '' : ui.bubbleSubject;
       renderBubbles(store);
       return;
     }
@@ -418,9 +463,20 @@ export function setupBubbles(store: Store): void {
     }
   });
 
-  $('#scoreHistory')?.addEventListener('mouseover', showRankTooltip);
-  $('#scoreHistory')?.addEventListener('mousemove', showRankTooltip);
-  $('#scoreHistory')?.addEventListener('mouseout', hideRankTooltip);
+  $('#scoreHistory')?.addEventListener('mouseover', (event) => showRankTooltip(event, store));
+  $('#scoreHistory')?.addEventListener('mousemove', (event) => showRankTooltip(event, store));
+  $('#scoreHistory')?.addEventListener('mouseleave', hideRankTooltip);
+  // 手机/平板没有 hover：点一下图上的考试列也能立即弹出详情
+  $('#scoreHistory')?.addEventListener('pointerdown', (event) => {
+    if ((event.target as Element | null)?.closest?.('.trend-chart.dual')) {
+      showRankTooltip(event, store);
+    }
+  });
+  $('#scoreHistory')?.addEventListener('click', (event) => {
+    if ((event.target as Element | null)?.closest?.('.trend-chart.dual')) {
+      showRankTooltip(event, store);
+    }
+  });
 
   // 点击气泡与座位/学生行以外的空白处 → 自动收起
   // 注意：气泡内点击会立即重渲染（DOM 被替换），此时 event.target 已脱离文档，

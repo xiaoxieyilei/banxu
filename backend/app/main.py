@@ -122,7 +122,11 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
         needs_auth = path.startswith("/api/") and not path.startswith(public_paths) and not path.startswith("/api/docs") and not path.startswith("/api/openapi")
         if needs_auth and not auth.authenticated(request):
             return JSONResponse(status_code=401, content={"detail": "需要口令登录", "code": "unauthorized"})
-        return await call_next(request)
+        response = await call_next(request)
+        # 前端静态文件不带 hash：让浏览器每次重新校验，避免升级后仍运行旧 JS
+        if not path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
 
     app.include_router(router)
 

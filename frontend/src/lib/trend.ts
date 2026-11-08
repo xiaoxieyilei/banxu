@@ -271,7 +271,7 @@ export function trendArrow(direction: TrendDirection): string {
 export function dualRankSvg(
   school: SeriesPoint[],
   klass: SeriesPoint[],
-  options: { width?: number; height?: number } = {},
+  options: { width?: number; height?: number; subject?: string } = {},
 ): string {
   const width = options.width ?? 330;
   const height = options.height ?? 168;
@@ -322,8 +322,9 @@ export function dualRankSvg(
       const classRank = classPoint && valid(classPoint.score) ? classPoint.score : null;
       if (schoolRank === null && classRank === null) return '';
       return (
-        `<rect class="rank-hit" x="${(x(index) - 10).toFixed(1)}" y="${pad.top}" width="24" height="${innerH}" ` +
-        `fill="transparent" pointer-events="all" data-exam="${attr(point.exam.name)}" data-date="${attr(point.exam.date)}" ` +
+        `<rect class="rank-hit" x="${(x(index) - 20).toFixed(1)}" y="${pad.top}" width="44" height="${innerH}" ` +
+        `fill="transparent" pointer-events="all" data-exam-id="${attr(point.exam.id)}" data-subject="${attr(options.subject ?? '')}" ` +
+        `data-exam="${attr(point.exam.name)}" data-date="${attr(point.exam.date)}" ` +
         `data-school="${schoolRank ?? ''}" data-class="${classRank ?? ''}"></rect>`
       );
     })

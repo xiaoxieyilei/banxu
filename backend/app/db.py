@@ -120,6 +120,45 @@ def _migrate(conn: sqlite3.Connection) -> None:
         "UPDATE discipline SET room = COALESCE((SELECT dorm FROM students WHERE students.id = discipline.student_id), '')"
         " WHERE type = '寝室违纪' AND room = ''"
     )
+    _normalize_biology_subject(conn)
+
+
+def _normalize_biology_subject(conn: sqlite3.Connection) -> None:
+    """把历史数据里的“生物学”统一迁移到“生物”，并保留满分/成绩/排名。"""
+    exams = [
+        row["exam_id"]
+        for row in conn.execute("SELECT DISTINCT exam_id FROM exam_subjects WHERE subject = '生物学'").fetchall()
+    ]
+    for exam_id in exams:
+        old = conn.execute(
+            "SELECT full_marks FROM exam_subjects WHERE exam_id = ? AND subject = '生物学'", (exam_id,)
+        ).fetchone()
+        current = conn.execute(
+            "SELECT full_marks FROM exam_subjects WHERE exam_id = ? AND subject = '生物'", (exam_id,)
+        ).fetchone()
+        if current is None:
+            conn.execute(
+                "UPDATE exam_subjects SET subject = '生物' WHERE exam_id = ? AND subject = '生物学'",
+                (exam_id,),
+            )
+        else:
+            if current["full_marks"] is None and old and old["full_marks"] is not None:
+                conn.execute(
+                    "UPDATE exam_subjects SET full_marks = ? WHERE exam_id = ? AND subject = '生物'",
+                    (old["full_marks"], exam_id),
+                )
+            conn.execute(
+                "DELETE FROM exam_subjects WHERE exam_id = ? AND subject = '生物学'",
+                (exam_id,),
+            )
+    conn.execute(
+        "INSERT OR IGNORE INTO scores (exam_id, student_id, subject, score, school_rank, class_rank)"
+        " SELECT exam_id, student_id, '生物', score, school_rank, class_rank"
+        " FROM scores WHERE subject = '生物学'"
+    )
+    conn.execute("DELETE FROM scores WHERE subject = '生物学'")
+    conn.execute("UPDATE settings SET subject = '生物' WHERE subject = '生物学'")
+    conn.execute("UPDATE settings SET call_subject = '生物' WHERE call_subject = '生物学'")
 
 
 def initialize(conn: sqlite3.Connection) -> None:

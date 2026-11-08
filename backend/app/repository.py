@@ -236,6 +236,17 @@ def import_dorms(conn: sqlite3.Connection, records: Iterable[dict]) -> int:
     return updated
 
 
+def _normalize_subject_map(mapping: Dict[str, object], label: str) -> Dict[str, object]:
+    """把 生物学 等别名统一成规范科目名；同一学生同科出现两个别名时拒绝。"""
+    normalized: Dict[str, object] = {}
+    for raw_subject, value in mapping.items():
+        subject = domain.normalize_subject(raw_subject)
+        if subject in normalized and normalized[subject] != value:
+            raise DomainError("%s包含重复科目：%s / %s" % (label, subject, raw_subject))
+        normalized[subject] = value
+    return normalized
+
+
 def _validate_exam_payload(
     conn: sqlite3.Connection,
     name: str,
@@ -245,9 +256,11 @@ def _validate_exam_payload(
     ranks: Dict[str, Dict[str, dict]],
     source_format: str,
     full_marks: Optional[Dict[str, Optional[float]]] = None,
-) -> Tuple[str, List[str], str, Dict[str, float]]:
+) -> Tuple[str, List[str], str, Dict[str, float], Dict[str, Dict[str, Optional[float]]], Dict[str, Dict[str, dict]]]:
     name = name.strip()
     subjects = domain.validate_exam(name, date, subjects)
+    scores = {sid: _normalize_subject_map(per_subject, "成绩") for sid, per_subject in scores.items()}
+    ranks = {sid: _normalize_subject_map(per_subject, "排名") for sid, per_subject in ranks.items()}
     if len(scores) > MAX_EXAM_STUDENTS or len(ranks) > MAX_EXAM_STUDENTS:
         raise DomainError("一次最多导入 %d 名学生的成绩" % MAX_EXAM_STUDENTS)
     known = _student_ids(conn)
@@ -269,7 +282,7 @@ def _validate_exam_payload(
     if len(source_format) > 40:
         raise DomainError("来源说明不超过 40 个字符")
     clean_full_marks = domain.validate_full_marks(subjects, full_marks or {})
-    return name, subjects, source_format, clean_full_marks
+    return name, subjects, source_format, clean_full_marks, scores, ranks
 
 
 def _insert_exam_rows(
@@ -309,7 +322,7 @@ def create_exam(
     exam_id: Optional[str] = None,
     full_marks: Optional[Dict[str, Optional[float]]] = None,
 ) -> str:
-    name, subjects, source_format, full_marks = _validate_exam_payload(
+    name, subjects, source_format, full_marks, scores, ranks = _validate_exam_payload(
         conn, name, date, subjects, scores, ranks, source_format, full_marks
     )
     exam_id = exam_id or uuid.uuid4().hex
@@ -337,7 +350,7 @@ def replace_exam(
     """用新导入的成绩覆盖同一场考试（保留考试 id，座位表选中的考试不会丢）。"""
     if conn.execute("SELECT 1 FROM exams WHERE id = ?", (exam_id,)).fetchone() is None:
         raise DomainError("考试不存在", status=404, code="exam_not_found")
-    name, subjects, source_format, full_marks = _validate_exam_payload(
+    name, subjects, source_format, full_marks, scores, ranks = _validate_exam_payload(
         conn, name, date, subjects, scores, ranks, source_format, full_marks
     )
     conn.execute("DELETE FROM scores WHERE exam_id = ?", (exam_id,))
@@ -393,7 +406,8 @@ def update_exam(
     domain.validate_exam(new_name, new_date, subjects)
     conn.execute("UPDATE exams SET name = ?, date = ? WHERE id = ?", (new_name, new_date, exam_id))
     if full_marks is not None:
-        for subject, value in full_marks.items():
+        for raw_subject, value in full_marks.items():
+            subject = domain.normalize_subject(raw_subject)
             if subject not in subjects:
                 raise DomainError("满分包含未声明的科目：%s" % subject)
             if value is None:

@@ -59,6 +59,8 @@ export function renderBubbles(store: Store): void {
     ui.bubbleSubject = subjects.includes('总分') ? '总分' : subjects[0] ?? '';
   }
   const chartSubject = ui.bubbleSubject;
+  if (ui.bubbleDetailSubject && !subjects.includes(ui.bubbleDetailSubject)) ui.bubbleDetailSubject = '';
+  const detailSubject = ui.bubbleDetailSubject;
   const schoolPoints = chartSubject ? rankSeries(state, studentId, chartSubject, 'school') : [];
   const classPoints = chartSubject ? rankSeries(state, studentId, chartSubject, 'class') : [];
 
@@ -113,6 +115,7 @@ export function renderBubbles(store: Store): void {
     .filter((exam) => {
       const values = exam.scores?.[studentId] ?? {};
       const ranks = exam.ranks?.[studentId] ?? {};
+      if (detailSubject) return values[detailSubject] != null || Boolean(ranks[detailSubject]);
       return Object.values(values).some((value) => value !== null) || Object.keys(ranks).length > 0;
     });
 
@@ -121,7 +124,9 @@ export function renderBubbles(store: Store): void {
       const values = exam.scores?.[studentId] ?? {};
       const ranks = exam.ranks?.[studentId] ?? {};
       const rows = exam.subjects
-        .filter((subject) => subject === '总分' || values[subject] != null || ranks[subject])
+        .filter((subject) =>
+          detailSubject ? subject === detailSubject : subject === '总分' || values[subject] != null || ranks[subject],
+        )
         .sort((a, b) => (a === '总分' ? -1 : b === '总分' ? 1 : 0))
         .map((subject) => {
           const rank = ranks[subject];
@@ -154,8 +159,12 @@ export function renderBubbles(store: Store): void {
       `<span class="chart-hint">虚线＝班次</span></div>` +
       summary +
       chart +
-      `<div class="exam-list-title">逐场成绩明细（每场的全部科目）</div>` +
-      (blocks || '<div class="bubble-empty">暂无考试成绩记录</div>'),
+      `<div class="exam-list-title">逐场成绩明细` +
+      `<select id="bubbleDetailSubject" class="bubble-detail-select" aria-label="按科目筛选逐场明细">` +
+      `<option value="">全部科目</option>` +
+      subjects.map((subject) => `<option value="${esc(subject)}"${subject === detailSubject ? ' selected' : ''}>${esc(subject)}</option>`).join('') +
+      `</select></div>` +
+      (blocks || '<div class="bubble-empty">该科目暂无逐场成绩</div>'),
   );
   schedulePosition();
 }
@@ -238,6 +247,7 @@ export function positionBubbles(): void {
 export function openStudentBubbles(store: Store, studentId: string): void {
   ui.bubbleStudentId = studentId;
   ui.bubbleSubject = '';
+  ui.bubbleDetailSubject = '';
   ui.lastDeletedDiscipline = null;
   renderTypeChips();
   const dateInput = $('#disciplineDate') as HTMLInputElement | null;
@@ -351,6 +361,14 @@ export function setupBubbles(store: Store): void {
         toast('已恢复刚才删除的违纪记录');
       })
       .catch((error: Error) => toast(error.message));
+  });
+
+  $('#scoreHistory')?.addEventListener('change', (event) => {
+    const select = event.target as HTMLSelectElement;
+    if (select.id === 'bubbleDetailSubject') {
+      ui.bubbleDetailSubject = select.value;
+      renderBubbles(store);
+    }
   });
 
   $('#scoreHistory')?.addEventListener('click', (event) => {

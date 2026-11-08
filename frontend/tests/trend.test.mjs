@@ -147,3 +147,29 @@ test('学科总表：班次序列与班次变化', async () => {
   assert.equal(row.classRankDelta, 7 - 9, '班次 7 → 9 为退步 2 名');
   assert.equal(row.rankDelta, 28 - 35);
 });
+
+test('加权均分按每次满分折算百分制；缺满分项单独计数', async () => {
+  const { weightedScoreFor, weightedOverallForStudent } = await import('../dist/lib/ranking.js');
+  const a = {
+    id: 'w1', name: 'w1', date: '2026-09-01', subjects: ['生物'], sourceFormat: '',
+    scores: { '001': { 生物: 80 } }, ranks: {}, fullMarks: { 生物: 100 },
+  };
+  const b = {
+    id: 'w2', name: 'w2', date: '2026-09-02', subjects: ['生物'], sourceFormat: '',
+    scores: { '001': { 生物: 30 } }, ranks: {}, fullMarks: { 生物: 60 },
+  };
+  const c = {
+    id: 'w3', name: 'w3', date: '2026-09-03', subjects: ['生物'], sourceFormat: '',
+    scores: { '001': { 生物: 40 } }, ranks: {}, fullMarks: {},
+  };
+  assert.deepEqual(weightedScoreFor('001', [a, b], '生物'), {
+    score: 65, count: 2, total: 2, missingFullMarks: 0,
+  });
+  assert.deepEqual(weightedScoreFor('001', [a, b, c], '生物'), {
+    score: 65, count: 2, total: 3, missingFullMarks: 1,
+  });
+  const weightedState = { students: [{ id: '001', name: '张三', gender: '男', note: '' }], exams: [a, b, c], seats: {}, discipline: {}, settings: {} };
+  assert.deepEqual(weightedOverallForStudent(weightedState, '001'), {
+    score: 65, count: 2, total: 3, missingFullMarks: 1,
+  });
+});

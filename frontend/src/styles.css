@@ -67,7 +67,8 @@
 .chart-controls{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .chart-controls .subject-chips{margin:6px 0 4px}
 .chart-title{font-size:11px;opacity:.85;padding:2px 4px 6px}
-.exam-list-title{font-size:11px;letter-spacing:1px;opacity:.75;margin:14px 0 6px}
+.exam-list-title{font-size:11px;letter-spacing:1px;opacity:.75;margin:14px 0 6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bubble .bubble-detail-select{width:auto;margin:0;padding:4px 8px;border-radius:6px;font-size:11px;background:#ffffffed;color:var(--ink)}
 .exam-block{background:#ffffff1a;border-radius:9px;padding:8px 9px;margin-bottom:8px}
 .exam-block-head{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:11px;margin-bottom:2px}
 .exam-block-head b{font-size:12px}

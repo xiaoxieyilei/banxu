@@ -1,4 +1,4 @@
-import type { CallRange, Category, Exam, RankedStudent, Student } from '../types.js';
+import type { AppState, CallRange, Category, Exam, RankedStudent, Student } from '../types.js';
 import { sortExams } from './dates.js';
 
 export const SUBJECT_ORDER = [
@@ -81,6 +81,66 @@ export function scoreFor(studentId: string, pool: Exam[], subject: string): Scor
 /** 有总分成绩的考试（含至少一条有效总分），按时间倒序；单科限时练不计入平均总分。 */
 export function totalExamPool(exams: Exam[]): Exam[] {
   return sortExams(exams).filter((exam) => examSubjects(exam).includes(TOTAL_SUBJECT));
+}
+
+export interface WeightedScore extends ScoreResult {
+  /** 有成绩但缺少满分的科目/场次数量，这些项未计入加权平均 */
+  missingFullMarks: number;
+}
+
+/** 按每次考试/科目的满分折算成百分制后再平均；缺满分项不计入。 */
+export function weightedScoreFor(studentId: string, pool: Exam[], subject: string): WeightedScore {
+  const values: number[] = [];
+  let missing = 0;
+  for (const exam of pool) {
+    const score = exam.scores?.[studentId]?.[subject];
+    if (typeof score !== 'number' || !Number.isFinite(score)) continue;
+    const full = exam.fullMarks?.[subject];
+    if (typeof full !== 'number' || !Number.isFinite(full) || full <= 0) {
+      missing += 1;
+      continue;
+    }
+    values.push((score / full) * 100);
+  }
+  if (!values.length) {
+    return { score: null, count: 0, total: pool.length, missingFullMarks: missing };
+  }
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  return {
+    score: Math.round((sum / values.length) * 100) / 100,
+    count: values.length,
+    total: pool.length,
+    missingFullMarks: missing,
+  };
+}
+
+/** 该生所有历次考试、所有非总分科目的加权平均（每科先按满分折算成百分制）。 */
+export function weightedOverallForStudent(state: AppState, studentId: string): WeightedScore {
+  const values: number[] = [];
+  let missing = 0;
+  let total = 0;
+  for (const exam of state.exams) {
+    for (const subject of examSubjects(exam)) {
+      if (subject === '总分') continue;
+      const score = exam.scores?.[studentId]?.[subject];
+      if (typeof score !== 'number' || !Number.isFinite(score)) continue;
+      total += 1;
+      const full = exam.fullMarks?.[subject];
+      if (typeof full !== 'number' || !Number.isFinite(full) || full <= 0) {
+        missing += 1;
+        continue;
+      }
+      values.push((score / full) * 100);
+    }
+  }
+  if (!values.length) return { score: null, count: 0, total, missingFullMarks: missing };
+  const sum = values.reduce((acc, value) => acc + value, 0);
+  return {
+    score: Math.round((sum / values.length) * 100) / 100,
+    count: values.length,
+    total,
+    missingFullMarks: missing,
+  };
 }
 
 export interface AverageTotal extends ScoreResult {

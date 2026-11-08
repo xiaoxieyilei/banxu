@@ -19,7 +19,7 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
  * PDF 的学号通常是学校考号，优先按学号匹配，失败再按唯一姓名匹配。
  */
 export function mapPdfRows(rows: PdfScoreRow[], students: Student[], subject = ''): PdfParsedExam {
-  const subjectName = subject.trim() || '成绩';
+  const subjectName = subject.trim() === '生物学' ? '生物' : subject.trim() || '成绩';
   const errors: string[] = [];
   const warnings: string[] = [];
   const scores: Record<string, Record<string, number | null>> = {};

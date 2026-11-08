@@ -1,6 +1,6 @@
 import type { AppState, Exam, Rank, Student } from '../types.js';
 import { toISODate } from './dates.js';
-import { SUBJECT_ORDER, examSubjects } from './ranking.js';
+import { SUBJECT_ORDER, examSubjects, weightedScoreFor } from './ranking.js';
 
 export interface SeriesPoint {
   exam: Exam;
@@ -29,6 +29,9 @@ export interface SubjectRow {
   best: number | null;
   worst: number | null;
   average: number | null;
+  /** 按每次考试该科满分折算成百分制后的平均；缺满分项不计入 */
+  weightedAverage: number | null;
+  weightedMissing: number;
   last: number | null;
   trend: TrendDirection;
 }
@@ -106,10 +109,13 @@ export function subjectRows(state: AppState, subject: string): SubjectRow[] {
       numberedClass.length >= 2
         ? numberedClass[numberedClass.length - 2] - numberedClass[numberedClass.length - 1]
         : null;
+    const weighted = weightedScoreFor(student.id, exams, subject);
     return {
       student,
       points,
       ...summarise(points),
+      weightedAverage: weighted.score,
+      weightedMissing: weighted.missingFullMarks,
       schoolRanks,
       classRanks,
       rankDelta,

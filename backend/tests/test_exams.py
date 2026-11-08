@@ -248,3 +248,23 @@ def test_exam_full_marks_roundtrip_and_validation(client, seeded):
     assert bad_subject.status_code == 400
     negative = client.patch("/api/exams/%s" % exam_id, json={"fullMarks": {"数学": -1}})
     assert negative.status_code == 400
+
+
+def test_biology_alias_normalized_to_biology_subject(client):
+    client.post("/api/students", json={"id": "001", "name": "张三"})
+    response = client.post(
+        "/api/exams",
+        json={
+            "name": "生物周练",
+            "date": "2026-10-12",
+            "subjects": ["生物学", "总分"],
+            "scores": {"001": {"生物学": 88, "总分": 88}},
+            "fullMarks": {"生物学": 100},
+        },
+    )
+    assert response.status_code == 201
+    exam = response.json()["exams"][0]
+    assert exam["subjects"] == ["生物", "总分"]
+    assert exam["scores"]["001"]["生物"] == 88
+    assert exam["fullMarks"]["生物"] == 100
+    assert "生物学" not in exam["subjects"]

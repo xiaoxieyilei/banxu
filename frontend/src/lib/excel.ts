@@ -116,7 +116,13 @@ export interface ExamParseHint {
   subject?: string;
 }
 
-const KNOWN_SUBJECTS = ['语文', '数学', '英语', '物理', '化学', '生物', '政治', '历史', '地理', '技术', '总分'];
+const KNOWN_SUBJECTS = ['语文', '数学', '英语', '物理', '化学', '生物', '生物学', '政治', '历史', '地理', '技术', '总分'];
+
+/** 学校表格中的科目别名统一到系统科目名。 */
+export const normalizeSubject = (value: string): string => {
+  const subject = value.trim();
+  return subject === '生物学' ? '生物' : subject;
+};
 const looksLikeSingleHeader = (row: string[]): boolean =>
   row.includes('序号') &&
   (row.includes('姓名') || row.includes('准考证号')) &&
@@ -205,6 +211,7 @@ export function parseExamSheet(rows: unknown[][], students: Student[], hint: Exa
 
   if (columns.id < 0 && columns.name < 0) errors.push('成绩表必须包含“学号”或“姓名”列。');
   if (!subjectColumns.length) errors.push('未找到成绩列，请使用班序模板或学校成绩汇总表。');
+  subjectColumns = subjectColumns.map((column) => ({ ...column, name: normalizeSubject(column.name) }));
   const names = subjectColumns.map((column) => column.name);
   if (new Set(names).size !== names.length) errors.push('科目名称重复，请为每列设置唯一表头。');
   if (errors.length) return result;

@@ -8,6 +8,7 @@ import {
   examSubjects,
   resolveSubject,
   sortPreview,
+  weightedOverallForStudent,
 } from '../lib/ranking.js';
 import type { Groups } from '../lib/ranking.js';
 import { $, esc, setHTML, setText } from './dom.js';
@@ -68,12 +69,15 @@ function examPreviewMarkup(state: AppState, exam: Exam, rawQuery: string): strin
     .map((student) => {
       const values = exam.scores[student.id] ?? {};
       const ranks = exam.ranks?.[student.id] ?? {};
+      const overall = weightedOverallForStudent(state, student.id);
       return `<tr><td>${esc(student.id)}</td><td><b>${esc(student.name)}</b></td>${subjects
         .map((subject) => {
           const rank = ranks[subject];
           return `<td>${values[subject] ?? '—'}<br><span class="rank-cell">${rank?.school ?? '—'} / ${rank?.class ?? '—'}</span></td>`;
         })
-        .join('')}</tr>`;
+        .join('')}<td>${overall.score ?? '—'}<br><span class="rank-cell" title="${
+          overall.missingFullMarks ? `${overall.missingFullMarks} 项缺少满分，未计入` : '所有历次考试、各科折算成百分制后的总平均'
+        }">${overall.count ? `${overall.count} 项` : '缺满分'}</span></td></tr>`;
     })
     .join('');
   return (
@@ -82,7 +86,7 @@ function examPreviewMarkup(state: AppState, exam: Exam, rawQuery: string): strin
     `<input id="examPreviewSearch" class="preview-filter" placeholder="搜索姓名或学号" value="${esc(rawQuery)}"></div>` +
     `<div class="exam-preview-table"><table><thead><tr>${header('id', '学号')}${header('name', '姓名')}${subjects
       .map((subject) => header(subject, subject, '<br><span class="rank-cell">成绩 / 校次 / 班次</span>'))
-      .join('')}</tr></thead><tbody>${body}</tbody></table>${people.length ? '' : '<div class="table-empty">没有匹配的学生</div>'}</div>`
+      .join('')}<th>历次加权平均<br><span class="rank-cell">各科百分制</span></th></tr></thead><tbody>${body}</tbody></table>${people.length ? '' : '<div class="table-empty">没有匹配的学生</div>'}</div>`
   );
 }
 
@@ -430,10 +434,14 @@ export function renderTrendPanel(state: AppState): void {
           return `<td>${scoreCell}${rankCell}</td>`;
         })
         .join('');
+      const weightedText =
+        row.weightedAverage === null
+          ? ''
+          : ` · <span title="${row.weightedMissing ? `${row.weightedMissing} 场缺少满分，未计入` : '按各场满分折算成百分制'}">加权均分 ${row.weightedAverage}${row.weightedMissing ? '*' : ''}</span>`;
       const summary =
         row.last === null
           ? '<span class="trend-summary">暂无成绩</span>'
-          : `<span class="trend-summary">最新 ${row.last} · 均分 ${row.average}${row.lastRank ? ` · 校次 ${row.lastRank}` : ''}${
+          : `<span class="trend-summary">最新 ${row.last} · 均分 ${row.average}${weightedText}${row.lastRank ? ` · 校次 ${row.lastRank}` : ''}${
               row.rankDelta === null || row.rankDelta === 0
                 ? ''
                 : `（${row.rankDelta > 0 ? '进步' : '退步'} ${Math.abs(row.rankDelta)} 名）`
@@ -452,9 +460,9 @@ export function renderTrendPanel(state: AppState): void {
   setHTML(
     '#examTrendPanel',
     `<div class="trend-head"><div><h2>学科成绩总表 · ${esc(ui.trendSubject)}</h2>` +
-      `<p>把全学期考过该科目的 ${exams.length} 次考试横向排开，便于整体分析走势（点任意一行查看该生详细趋势）</p></div>` +
+      `<p>把全学期考过该科目的 ${exams.length} 次考试横向排开，便于整体分析走势；加权均分按各场满分折算成百分制，缺满分场次不计入（点任意一行查看该生详细趋势）</p></div>` +
       `<div class="actions">${chips}</div></div>` +
-      `<div class="trend-table"><table><thead><tr><th class="name">姓名</th>${header}<th>最新 / 均分 / 最高 / 最低</th></tr></thead>` +
+      `<div class="trend-table"><table><thead><tr><th class="name">姓名</th>${header}<th>最新 / 均分 / 加权均分 / 最高 / 最低</th></tr></thead>` +
       `<tbody>${body}</tbody></table></div>`,
   );
 }

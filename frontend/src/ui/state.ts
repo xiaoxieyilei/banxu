@@ -30,6 +30,7 @@ export const ui = {
   examTab: 'single' as 'single' | 'trend',
   discTab: 'personal' as 'personal' | 'dorm',
   bubbleSubject: '' as string,
+  bubbleDetailSubject: '' as string,
   bubbleRankMode: 'school' as 'school' | 'class',
   importState: null as ImportState | null,
   parsedRoster: null as { records: unknown[]; errors: string[] } | null,

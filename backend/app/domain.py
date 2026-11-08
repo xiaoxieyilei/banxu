@@ -20,6 +20,13 @@ DISCIPLINE_TYPES = (
     "带水杯进教室",
 )
 CALL_RANGES = ("single", "recent3", "recent5", "all")
+# 学校有时把生物写成“生物学”；系统内部统一使用“生物”
+SUBJECT_ALIASES = {"生物学": "生物"}
+
+
+def normalize_subject(value: object) -> str:
+    subject = str(value or "").strip()
+    return SUBJECT_ALIASES.get(subject, subject)
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SEAT_RE = re.compile(r"^R([1-7])C([1-8])$")
 EXAM_SUBJECT_MAX = 20
@@ -92,7 +99,7 @@ def validate_exam(name: str, date: str, subjects: Iterable[str]) -> List[str]:
     if not name or len(name) > EXAM_NAME_MAX:
         raise DomainError("考试名称不能为空且不超过 %d 个字符" % EXAM_NAME_MAX)
     validate_date(date, "考试时间")
-    cleaned = [str(subject).strip() for subject in subjects]
+    cleaned = [normalize_subject(subject) for subject in subjects]
     if not cleaned:
         raise DomainError("考试至少要有一个科目")
     if any(len(subject) > 20 for subject in cleaned):
@@ -123,7 +130,8 @@ def validate_full_marks(subjects: Iterable[str], full_marks: dict) -> dict:
     """校验每科满分：只能引用已声明科目，且是 0–10000 的正数；未填的科目不返回。"""
     subjects = set(subjects)
     cleaned = {}
-    for subject, value in (full_marks or {}).items():
+    for raw_subject, value in (full_marks or {}).items():
+        subject = normalize_subject(raw_subject)
         if subject not in subjects:
             raise DomainError("满分包含未声明的科目：%s" % subject)
         if value is None:
@@ -182,10 +190,10 @@ def validate_settings_values(
         raise DomainError("统计方式只能是 single / recent3 / recent5 / all")
     if seat_range not in CALL_RANGES:
         raise DomainError("座位表统计方式只能是 single / recent3 / recent5 / all")
-    clean_subject = str(subject or "总分").strip()
+    clean_subject = normalize_subject(subject or "总分")
     if not clean_subject or len(clean_subject) > 20:
         raise DomainError("排名科目不能为空且不超过 20 个字符")
-    clean_call_subject = str(call_subject or "").strip()
+    clean_call_subject = normalize_subject(call_subject or "")
     if len(clean_call_subject) > 20:
         raise DomainError("点名科目不超过 20 个字符")
     return name, clean_subject, clean_call_subject

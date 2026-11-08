@@ -159,6 +159,7 @@ export function renderBubbles(store: Store): void {
       `<span class="chart-hint">虚线＝班次</span></div>` +
       summary +
       chart +
+      `<div id="rankTooltip" class="rank-tooltip" hidden></div>` +
       `<div class="exam-list-title">逐场成绩明细` +
       `<select id="bubbleDetailSubject" class="bubble-detail-select" aria-label="按科目筛选逐场明细">` +
       `<option value="">全部科目</option>` +
@@ -275,6 +276,36 @@ export function closeStudentBubbles(): void {
   $('#studentBubbles')?.classList.remove('open');
 }
 
+function showRankTooltip(event: MouseEvent): void {
+  const target = event.target as Element | null;
+  const hit = target?.closest?.('.rank-hit') as Element | null;
+  const tip = $('#rankTooltip') as HTMLElement | null;
+  if (!hit || !tip) return;
+  const exam = hit.getAttribute('data-exam') ?? '考试';
+  const date = hit.getAttribute('data-date') ?? '';
+  const school = hit.getAttribute('data-school') ?? '';
+  const klass = hit.getAttribute('data-class') ?? '';
+  tip.innerHTML =
+    `<b>${esc(exam)}</b>` +
+    `<div class="rank-tooltip-date">${esc(date)}</div>` +
+    `<div>校次：${school ? `第 ${esc(school)} 名` : '—'}</div>` +
+    `<div>班次：${klass ? `第 ${esc(klass)} 名` : '—'}</div>`;
+  tip.hidden = false;
+  const width = tip.offsetWidth || 180;
+  const height = tip.offsetHeight || 70;
+  const left = Math.max(8, Math.min(event.clientX + 12, window.innerWidth - width - 8));
+  const top = Math.max(8, Math.min(event.clientY + 12, window.innerHeight - height - 8));
+  tip.style.left = `${Math.round(left)}px`;
+  tip.style.top = `${Math.round(top)}px`;
+}
+
+function hideRankTooltip(event: MouseEvent): void {
+  const target = event.target as Element | null;
+  if (!target?.closest?.('.rank-hit')) return;
+  const tip = $('#rankTooltip') as HTMLElement | null;
+  if (tip) tip.hidden = true;
+}
+
 export function setupBubbles(store: Store): void {
   $('#discTypes')?.addEventListener('click', (event) => {
     const button = (event.target as HTMLElement).closest<HTMLElement>('[data-disc-type]');
@@ -385,6 +416,10 @@ export function setupBubbles(store: Store): void {
       renderBubbles(store);
     }
   });
+
+  $('#scoreHistory')?.addEventListener('mouseover', showRankTooltip);
+  $('#scoreHistory')?.addEventListener('mousemove', showRankTooltip);
+  $('#scoreHistory')?.addEventListener('mouseout', hideRankTooltip);
 
   // 点击气泡与座位/学生行以外的空白处 → 自动收起
   // 注意：气泡内点击会立即重渲染（DOM 被替换），此时 event.target 已脱离文档，

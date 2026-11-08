@@ -86,7 +86,7 @@ try {
       ],
     }),
   });
-  const seedExam = (name, date, scores) =>
+  const seedExam = (name, date, scores, ranks = {}) =>
     api('/api/exams', {
       method: 'POST',
       body: JSON.stringify({
@@ -94,13 +94,23 @@ try {
         date,
         subjects: ['数学'],
         scores,
-        ranks: {},
+        ranks,
         fullMarks: { 数学: 120 },
         sourceFormat: 'E2E',
       }),
     });
-  await seedExam('数学限时 A', '2026-11-01', { '001': { 数学: 96 }, '002': { 数学: 60 } });
-  await seedExam('数学限时 B', '2026-10-25', { '001': { 数学: 72 }, '002': { 数学: 120 } });
+  await seedExam(
+    '数学限时 A',
+    '2026-11-01',
+    { '001': { 数学: 96 }, '002': { 数学: 60 } },
+    { '001': { 数学: { school: 5, class: 2 } } },
+  );
+  await seedExam(
+    '数学限时 B',
+    '2026-10-25',
+    { '001': { 数学: 72 }, '002': { 数学: 120 } },
+    { '001': { 数学: { school: 3, class: 1 } } },
+  );
   await api('/api/seats/move', { method: 'POST', body: JSON.stringify({ studentId: '001', target: 'R1C1' }) });
   await api('/api/seats/move', { method: 'POST', body: JSON.stringify({ studentId: '002', target: 'R1C2' }) });
 
@@ -172,6 +182,10 @@ try {
   const detailText = await page.locator('#scoreHistory').innerText();
   assert.ok(detailText.includes('逐场成绩明细'), '逐场明细应保留标题');
   assert.ok(detailText.includes('数学'), '筛选后应显示数学明细');
+  await page.locator('#scoreHistory .rank-hit').first().hover();
+  await page.waitForSelector('#rankTooltip:not([hidden])');
+  const tooltip = await page.locator('#rankTooltip').innerText();
+  assert.ok(tooltip.includes('校次') && tooltip.includes('班次'), '悬停应显示校次和班次准确数据');
 
   assert.deepEqual(pageErrors, [], '页面不应有运行时错误');
   console.log('E2E 通过：登录、座位百分制平均、单场考试、考试档案下拉');

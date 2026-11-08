@@ -313,6 +313,21 @@ export function dualRankSvg(
     return segments;
   };
 
+  const attr = (value: unknown): string =>
+    String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const hits = school
+    .map((point, index) => {
+      const classPoint = klass[index];
+      const schoolRank = valid(point.score) ? point.score : null;
+      const classRank = classPoint && valid(classPoint.score) ? classPoint.score : null;
+      if (schoolRank === null && classRank === null) return '';
+      return (
+        `<rect class="rank-hit" x="${(x(index) - 10).toFixed(1)}" y="${pad.top}" width="20" height="${innerH}" ` +
+        `fill="transparent" pointer-events="all" data-exam="${attr(point.exam.name)}" data-date="${attr(point.exam.date)}" ` +
+        `data-school="${schoolRank ?? ''}" data-class="${classRank ?? ''}"></rect>`
+      );
+    })
+    .join('');
   const dotsFor = (points: SeriesPoint[], range: { low: number; high: number } | null, kind: string): string =>
     !range
       ? ''
@@ -356,6 +371,7 @@ export function dualRankSvg(
     axisTicks(classRange, 'right') +
     polylines(schoolSegments, 'school') +
     polylines(classSegments, 'class') +
+    hits +
     dotsFor(school, schoolRange, 'school') +
     dotsFor(klass, classRange, 'class') +
     `<line class="trend-axis-line" x1="${pad.left}" y1="${pad.top + innerH}" x2="${width - pad.right}" y2="${pad.top + innerH}"></line>` +

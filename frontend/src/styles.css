@@ -69,6 +69,11 @@
 .chart-title{font-size:11px;opacity:.85;padding:2px 4px 6px}
 .exam-list-title{font-size:11px;letter-spacing:1px;opacity:.75;margin:14px 0 6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .bubble .bubble-detail-select{width:auto;margin:0;padding:4px 8px;border-radius:6px;font-size:11px;background:#ffffffed;color:var(--ink)}
+.rank-hit{cursor:pointer;pointer-events:all}
+.rank-tooltip{position:fixed;z-index:1400;pointer-events:none;background:#fff;color:#1d3b31;border-radius:9px;padding:9px 11px;box-shadow:0 10px 26px #0e2a2033;font-size:12px;line-height:1.55;min-width:150px}
+.rank-tooltip[hidden]{display:none}
+.rank-tooltip b{font-size:13px}
+.rank-tooltip-date{color:#6b8078;margin-bottom:3px}
 .exam-block{background:#ffffff1a;border-radius:9px;padding:8px 9px;margin-bottom:8px}
 .exam-block-head{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:11px;margin-bottom:2px}
 .exam-block-head b{font-size:12px}

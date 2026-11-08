@@ -109,6 +109,10 @@ test('双轴排名图：校次实线与班次虚线都渲染，缺数据时给�
   assert.equal((svg.match(/rank-dot school/g) ?? []).length, 3);
   assert.equal((svg.match(/rank-dot class/g) ?? []).length, 2, '缺值不画点');
   assert.ok(svg.includes('aria-label'));
+  assert.equal((svg.match(/rank-hit/g) ?? []).length, 3, '每次有排名的考试都有悬停热区');
+  assert.ok(svg.includes('data-exam="e1"'));
+  assert.ok(svg.includes('data-school="120"'));
+  assert.ok(svg.includes('data-class="12"'));
 
   const empty = dualRankSvg([{ exam: e1, score: null }], [{ exam: e1, score: null }]);
   assert.ok(empty.includes('暂无排名数据'));

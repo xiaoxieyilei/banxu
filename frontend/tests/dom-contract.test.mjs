@@ -12,7 +12,7 @@ const html = readFileSync(join(dist, 'index.html'), 'utf8');
 const DYNAMIC_IDS = new Set([
   'examPreviewSearch', 'discText', 'discDefaultDate', 'discImportCommit', 'discParseNotice', 'discParsePreview',
   'examName', 'examDate', 'excelFile', 'sheetSelect', 'importOptions', 'importPreview', 'importNotice',
-  'commitImport', 'modalTemplate', 'pdfSubject', 'pdfSubjectRow', 'overwriteExam', 'applyUpdateBtn', 'dormDiscAll', 'dormDiscNone', 'dormDiscMembers', 'bubbleDetailSubject', 'fillSeats', 'randomSeats', 'exportSeats', 'clearSeats', 'confirmAction',
+  'commitImport', 'modalTemplate', 'pdfSubject', 'pdfSubjectRow', 'overwriteExam', 'applyUpdateBtn', 'dormDiscAll', 'dormDiscNone', 'dormDiscMembers', 'bubbleDetailSubject', 'rankTooltip', 'fillSeats', 'randomSeats', 'exportSeats', 'clearSeats', 'confirmAction',
   'editId', 'editName', 'editGender', 'editNote', 'saveStudent',
   'renameExamInput', 'renameExamDate', 'saveExamName', 'discSkipDup', 'editDorm', 'dormFile', 'dormNotice', 'dormCommit', 'dormPreview', 'dormDiscDate', 'dormDiscReason', 'dormDiscSave',
   'dormEditRoom', 'dormEditCount', 'dormEditSearch', 'dormEditMembers', 'dormEditIncidents', 'dormEditAddIncident', 'dormEditSave',

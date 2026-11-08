@@ -114,30 +114,36 @@ export function weightedScoreFor(studentId: string, pool: Exam[], subject: strin
   };
 }
 
-/** 该生所有历次考试、所有非总分科目的加权平均（每科先按满分折算成百分制）。 */
+/** 该生所有历次考试的加权平均：每次考试先把各科按满分折算成百分制，求该场平均，再对各场平均。 */
 export function weightedOverallForStudent(state: AppState, studentId: string): WeightedScore {
-  const values: number[] = [];
+  const examAverages: number[] = [];
   let missing = 0;
   let total = 0;
   for (const exam of state.exams) {
+    const percentages: number[] = [];
+    let hasScore = false;
     for (const subject of examSubjects(exam)) {
       if (subject === '总分') continue;
       const score = exam.scores?.[studentId]?.[subject];
       if (typeof score !== 'number' || !Number.isFinite(score)) continue;
-      total += 1;
+      hasScore = true;
       const full = exam.fullMarks?.[subject];
       if (typeof full !== 'number' || !Number.isFinite(full) || full <= 0) {
         missing += 1;
         continue;
       }
-      values.push((score / full) * 100);
+      percentages.push((score / full) * 100);
+    }
+    if (hasScore) total += 1;
+    if (percentages.length) {
+      examAverages.push(percentages.reduce((acc, value) => acc + value, 0) / percentages.length);
     }
   }
-  if (!values.length) return { score: null, count: 0, total, missingFullMarks: missing };
-  const sum = values.reduce((acc, value) => acc + value, 0);
+  if (!examAverages.length) return { score: null, count: 0, total, missingFullMarks: missing };
+  const sum = examAverages.reduce((acc, value) => acc + value, 0);
   return {
-    score: Math.round((sum / values.length) * 100) / 100,
-    count: values.length,
+    score: Math.round((sum / examAverages.length) * 100) / 100,
+    count: examAverages.length,
     total,
     missingFullMarks: missing,
   };

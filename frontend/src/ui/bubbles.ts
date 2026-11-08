@@ -157,14 +157,15 @@ export function renderBubbles(store: Store): void {
     '#scoreHistory',
     `<div class="chart-controls"><div class="subject-chips" id="scoreSubjects">${chartChips}</div>` +
       `<span class="chart-hint">虚线＝班次</span></div>` +
-      summary +
-      chart +
-      `<div id="rankTooltip" class="rank-tooltip" hidden></div>` +
-      `<div class="exam-list-title">逐场成绩明细` +
+      `<div class="detail-filter-row"><label for="bubbleDetailSubject">逐场明细科目</label>` +
       `<select id="bubbleDetailSubject" class="bubble-detail-select" aria-label="按科目筛选逐场明细">` +
       `<option value="">全部科目</option>` +
       subjects.map((subject) => `<option value="${esc(subject)}"${subject === detailSubject ? ' selected' : ''}>${esc(subject)}</option>`).join('') +
       `</select></div>` +
+      summary +
+      chart +
+      `<div id="rankTooltip" class="rank-tooltip" hidden></div>` +
+      `<div class="exam-list-title">逐场成绩明细（鼠标移到排名点上可看校次/班次）</div>` +
       (blocks || '<div class="bubble-empty">该科目暂无逐场成绩</div>'),
   );
   schedulePosition();

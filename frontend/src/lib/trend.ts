@@ -322,7 +322,7 @@ export function dualRankSvg(
       const classRank = classPoint && valid(classPoint.score) ? classPoint.score : null;
       if (schoolRank === null && classRank === null) return '';
       return (
-        `<rect class="rank-hit" x="${(x(index) - 10).toFixed(1)}" y="${pad.top}" width="20" height="${innerH}" ` +
+        `<rect class="rank-hit" x="${(x(index) - 10).toFixed(1)}" y="${pad.top}" width="24" height="${innerH}" ` +
         `fill="transparent" pointer-events="all" data-exam="${attr(point.exam.name)}" data-date="${attr(point.exam.date)}" ` +
         `data-school="${schoolRank ?? ''}" data-class="${classRank ?? ''}"></rect>`
       );
@@ -334,7 +334,7 @@ export function dualRankSvg(
       : points
           .map((point, index) =>
             valid(point.score)
-              ? `<circle class="rank-dot ${kind}" cx="${x(index).toFixed(1)}" cy="${yFor(point.score, range).toFixed(1)}" r="2.6">` +
+              ? `<circle class="rank-dot ${kind}" cx="${x(index).toFixed(1)}" cy="${yFor(point.score, range).toFixed(1)}" r="2.6" pointer-events="none">` +
                 `<title>${point.exam.name} ${point.exam.date}：第 ${point.score} 名</title></circle>`
               : '',
           )
@@ -371,10 +371,10 @@ export function dualRankSvg(
     axisTicks(classRange, 'right') +
     polylines(schoolSegments, 'school') +
     polylines(classSegments, 'class') +
-    hits +
     dotsFor(school, schoolRange, 'school') +
     dotsFor(klass, classRange, 'class') +
     `<line class="trend-axis-line" x1="${pad.left}" y1="${pad.top + innerH}" x2="${width - pad.right}" y2="${pad.top + innerH}"></line>` +
+    hits +
     '</svg>'
   );
 }

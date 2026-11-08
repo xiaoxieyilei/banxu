@@ -182,7 +182,9 @@ try {
   const detailText = await page.locator('#scoreHistory').innerText();
   assert.ok(detailText.includes('逐场成绩明细'), '逐场明细应保留标题');
   assert.ok(detailText.includes('数学'), '筛选后应显示数学明细');
-  await page.locator('#scoreHistory .rank-hit').first().hover();
+  const dot = await page.locator('#scoreHistory .rank-dot').first().boundingBox();
+  assert.ok(dot, '排名点应可见');
+  await page.mouse.move(dot.x + dot.width / 2, dot.y + dot.height / 2);
   await page.waitForSelector('#rankTooltip:not([hidden])');
   const tooltip = await page.locator('#rankTooltip').innerText();
   assert.ok(tooltip.includes('校次') && tooltip.includes('班次'), '悬停应显示校次和班次准确数据');
